@@ -1,3 +1,5 @@
+`include "const.v"
+
 module RegisterFile (
     input wire clk_in,  // system clock signal
     input wire rst_in,  // reset signal
@@ -31,4 +33,15 @@ module RegisterFile (
             end
         end
     end
+
+`ifdef DEBUG
+    generate
+        genvar idx;
+        for (idx = 0; idx < 32; idx = idx + 1) begin : rv
+            wire [31:0] regv;
+            assign regv = regs[idx];
+        end
+    endgenerate
+`endif
+
 endmodule
