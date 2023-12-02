@@ -1,6 +1,13 @@
 // RISCV32I CPU top module
 // port modification allowed for debugging purposes
 
+`define RED "\033[31m"
+`define GREEN "\033[32m"
+`define YELLOW "\033[33m"
+`define BLUE "\033[34m"
+`define PURPLE "\033[35m"
+`define RESET "\033[0m"
+
 module cpu (
     input wire clk_in,  // system clock signal
     input wire rst_in,  // reset signal
@@ -124,7 +131,7 @@ module cpu (
             // do nothing
         end
         else begin
-            // $display("inst %h at %h", inst, PC);
+            // $display(`YELLOW, "inst %h at %h", inst, PC, `RESET);
             case (opcode)
                 7'b0110111: begin : LUI
                     reg_set_id <= rd;
@@ -134,17 +141,23 @@ module cpu (
                 7'b1101111: begin : JAL
                     reg_set_id <= rd;
                     reg_set_val <= PC + 4;
-                    PC <= PC + {immJ, 1'b0};
+                    PC <= PC + {{12{immJ[19]}}, immJ, 1'b0};
+                end
+                7'b1100111: begin : JALR
+                    PC <= (reg_get_val1 + {{20{immI[10]}}, immI}) & ~32'b1;
+                    reg_set_id <= rd;
+                    reg_set_val <= PC + 4;
                 end
                 7'b0010011: begin : Itype
                     case (func)
                         3'b000: begin : addi
                             reg_set_id <= rd;
-                            reg_set_val <= reg_get_val1 + immI;
+                            reg_set_val <= reg_get_val1 + {{20{immI[10]}}, immI};
                             PC <= PC + 4;
                         end
                         default: begin
-                            $display("Itype %h at %h not support", inst, PC);
+                            $display(`RED, "Itype %h at %h not support", inst, PC, `RESET);
+                            $finish();
                         end
                     endcase
                 end
@@ -183,14 +196,15 @@ module cpu (
                 end
                 7'b1100011: begin : Branch
                     if (get_branch_result(reg_get_val1, reg_get_val2, func)) begin
-                        PC <= PC + $signed({immB, 1'b0});
+                        PC <= PC + {{20{immB[10]}}, immB, 1'b0};
+                        // $display(`BLUE, "branch cur=%h imm=%h to=%h", PC, {{20{immB[10]}}, immB, 1'b0}, PC + {{20{immB[10]}}, immB, 1'b0}, `RESET);
                     end
                     else begin
                         PC <= PC + 4;
                     end
                 end
                 default: begin
-                    $display("inst %h at %h not support", inst, PC);
+                    $display(`RED, "inst %h at %h not support", inst, PC, `RESET);
                     $finish();
                 end
             endcase

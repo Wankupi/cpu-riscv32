@@ -29,8 +29,8 @@ module InstuctionCache #(
         if (rst_in) begin : RESET
             integer i;
             for (i = 0; i < SIZE; i = i + 1) begin
-                buff[i] <= 0;
-                tags[i] <= 0;
+                buff[i]  <= 0;
+                tags[i]  <= 0;
                 exist[i] <= 0;
             end
         end
@@ -39,8 +39,8 @@ module InstuctionCache #(
         end
         else if (we) begin
             exist[index] <= 1;
-            buff[index] <= data;
-            tags[index] <= tag;
+            buff[index]  <= data;
+            tags[index]  <= tag;
         end
     end
 

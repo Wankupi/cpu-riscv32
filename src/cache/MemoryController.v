@@ -47,16 +47,17 @@ module MemoryController (
     reg [ 2:0] work_cycle;
     reg [31:0] current_addr;
     reg [ 7:0] current_data;
+    reg        current_wr;
     reg [31:0] result;
 
-    assign ready = worked && work_cycle == 0 && work_addr == addr;
+    assign ready = worked && work_cycle == 0 && work_addr == addr && work_wr == wr && work_len == len;
     wire need_work = valid && !ready;
 
     // `direct` choose direct or inner value
     // 0: direct, 1: inner
     // direct means connect the input of this module to the input of Memory directyly
     wire direct = work_cycle == 0 && need_work;
-    assign mem_wr = direct ? wr : work_wr;
+    assign mem_wr = direct ? wr : current_wr;
     assign mem_a = direct ? addr : current_addr;
     assign mem_dout = direct ? data[7:0] : current_data;
 
@@ -71,6 +72,7 @@ module MemoryController (
             work_cycle <= 0;
             current_addr <= 0;
             current_data <= 0;
+            current_wr <= 0;
             result <= 0;
         end
         else if (!rdy_in) begin
@@ -80,25 +82,39 @@ module MemoryController (
             case (work_cycle)
                 3'b000: begin  // not working: waiting or done
                     if (need_work) begin
-                        work_cycle <= (len[1:0] ? 3'b001 : 3'b000);
-                        work_addr  <= addr;
-                        work_wr    <= wr;
-                        work_len   <= len;
-                        current_addr <= addr + 1;
-                        current_data <= data[15:8];
                         result <= data;
                         worked <= 1;
+                        work_len <= len;
+                        work_addr <= addr;
+                        work_wr    <= wr;
+                        if (len[1:0]) begin
+                            work_cycle   <= 3'b001;
+                            current_addr <= addr + 1;
+                            current_data <= data[15:8];
+                            current_wr   <= wr;
+                        end
+                        else begin
+                            work_cycle   <= 3'b000;
+                            // special case: addr[17:16] == 2'b11
+                            // otherwise, keep addr
+                            current_addr <= addr[17:16] == 2'b11 ? 0 : addr;
+                            current_data <= 0;
+                            current_wr   <= 0;
+                        end
                     end
                 end
                 3'b001: begin
-                    result[7:0]  <= mem_din;
-                    current_addr <= addr + 2;
-                    current_data <= data[23:16];
-                    if (work_len == 2'b01) begin
-                        work_cycle <= 3'b000;
+                    result[7:0] <= mem_din;
+                    if (work_len[1:0] == 2'b01) begin
+                        work_cycle   <= 3'b000;
+                        current_data <= 0;
+                        current_wr   <= 0;
+                        // keep current_addr
                     end
                     else begin
-                        work_cycle <= 3'b010;
+                        work_cycle   <= 3'b010;
+                        current_addr <= addr + 2;
+                        current_data <= data[23:16];
                     end
                 end
                 3'b010: begin
@@ -110,6 +126,9 @@ module MemoryController (
                 3'b011: begin
                     result[23:16] <= mem_din;
                     work_cycle <= 3'b000;
+                    current_data <= 0;
+                    current_wr <= 0;
+                    // keep current_addr
                 end
             endcase
         end
