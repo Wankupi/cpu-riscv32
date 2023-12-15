@@ -8,15 +8,25 @@ module RegisterFile (
     input wire [ 4:0] set_reg_id,
     input wire [31:0] set_val,
 
-    input  wire [ 4:0] get_id1,
+    input wire [4:0] get_id1,
     output wire [31:0] get_val1,
-    input  wire [ 4:0] get_id2,
-    output wire [31:0] get_val2
+    output wire get_has_dep1,
+    output wire [`ROB_WIDTH_BIT - 1:0] get_dep1,
+    input wire [4:0] get_id2,
+    output wire [31:0] get_val2,
+    output wire get_has_dep2,
+    output wire [`ROB_WIDTH_BIT - 1:0] get_dep2
 );
     reg [31:0] regs[0:31];
+    reg [`ROB_WIDTH_BIT - 1:0] dep[0:31];
+    reg has_dep[0:31];
 
     assign get_val1 = regs[get_id1];
     assign get_val2 = regs[get_id2];
+    assign get_has_dep1 = has_dep[get_id1];
+    assign get_has_dep2 = has_dep[get_id2];
+    assign get_dep1 = dep[get_id1];
+    assign get_dep2 = dep[get_id2];
 
     always @(posedge clk_in) begin
         if (rst_in) begin
