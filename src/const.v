@@ -17,4 +17,8 @@
 `define RS_TYPE_BIT 3
 
 
+// LS_TYPE: 4 bit
+// [3] { 0: r, 1: w }
+// [2:0] { 000: b, 001: h, 010: w, 011: d, 100: b, 101: h, 110: w, 111: d  }
+// dword may not support
 `define LS_TYPE_BIT 4
