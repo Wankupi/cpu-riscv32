@@ -14,7 +14,8 @@
 
 `define ROB_TYPE_BIT 3
 
-`define RS_TYPE_BIT 3
+`define RS_TYPE_BIT 4
+`define RS_SIZE_BIT 4
 
 
 // LS_TYPE: 4 bit
@@ -22,3 +23,4 @@
 // [2:0] { 000: b, 001: h, 010: w, 011: d, 100: b, 101: h, 110: w, 111: d  }
 // dword may not support
 `define LS_TYPE_BIT 4
+`define LSB_SIZE_BIT 4

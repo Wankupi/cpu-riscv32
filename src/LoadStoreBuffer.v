@@ -1,7 +1,7 @@
 `include "const.v"
 
 module LoadStoreBuffer #(
-    parameter LSB_SIZE_BIT = 4
+    parameter LSB_SIZE_BIT = `LSB_SIZE_BIT
 ) (
     input wire clk_in,  // system clock signal
     input wire rst_in,  // reset signal
@@ -81,7 +81,17 @@ module LoadStoreBuffer #(
             head <= 0;
             tail <= 0;
             work <= 0;
-            // TODO: init other registers
+            for (integer i = 0; i < LSB_SIZE; i = i + 1) begin
+                busy[i] <= 0;
+                rob_id[i] <= 0;
+                work_type[i] <= 0;
+                r1[i] <= 0;
+                r2[i] <= 0;
+                has_dep1[i] <= 0;
+                has_dep2[i] <= 0;
+                dep1[i] <= 0;
+                dep2[i] <= 0;
+            end
         end
         else if (!rdy_in) begin
             // do nothing
