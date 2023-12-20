@@ -12,7 +12,7 @@
 `define ROB_WIDTH_BIT 5
 `define ROB_WIDTH (1 << `ROB_WIDTH_BIT)
 
-`define ROB_TYPE_BIT 3
+`define ROB_TYPE_BIT 2
 
 `define RS_TYPE_BIT 4
 `define RS_SIZE_BIT 4

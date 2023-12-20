@@ -5,16 +5,20 @@ module RegisterFile (
     input wire rst_in,  // reset signal
     input wire rdy_in,  // ready signal, pause cpu when low
 
-    input wire [ 4:0] set_reg_id,
+    input wire [4:0] set_reg_id,
     input wire [31:0] set_val,
+    input wire [`ROB_WIDTH_BIT - 1:0] set_reg_on_rob_id,
 
-    input wire [4:0] get_id1,
-    output wire [31:0] get_val1,
-    output wire get_has_dep1,
+    input wire [                 4:0] set_dep_reg_id,
+    input wire [`ROB_WIDTH_BIT - 1:0] set_dep_rob_id,
+
+    input  wire [                 4:0] get_id1,
+    output wire [                31:0] get_val1,
+    output wire                        get_has_dep1,
     output wire [`ROB_WIDTH_BIT - 1:0] get_dep1,
-    input wire [4:0] get_id2,
-    output wire [31:0] get_val2,
-    output wire get_has_dep2,
+    input  wire [                 4:0] get_id2,
+    output wire [                31:0] get_val2,
+    output wire                        get_has_dep2,
     output wire [`ROB_WIDTH_BIT - 1:0] get_dep2
 );
     reg [31:0] regs[0:31];
@@ -40,6 +44,13 @@ module RegisterFile (
         else begin
             if (set_reg_id) begin
                 regs[set_reg_id] <= set_val;
+                if (!set_dep_reg_id && set_reg_on_rob_id == dep[set_reg_id]) begin
+                    has_dep[set_reg_id] <= 0;
+                end
+            end
+            if (set_dep_reg_id) begin
+                dep[set_dep_reg_id] <= set_dep_rob_id;
+                has_dep[set_dep_reg_id] <= 1;
             end
         end
     end
