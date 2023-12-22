@@ -5,6 +5,8 @@ module RegisterFile (
     input wire rst_in,  // reset signal
     input wire rdy_in,  // ready signal, pause cpu when low
 
+    input wire rob_clear,
+
     input wire [4:0] set_reg_id,
     input wire [31:0] set_val,
     input wire [`ROB_WIDTH_BIT - 1:0] set_reg_on_rob_id,
@@ -36,13 +38,22 @@ module RegisterFile (
         if (rst_in) begin
             for (integer i = 0; i < 32; ++i) begin
                 regs[i] <= 0;
+                dep[i] <= 0;
+                has_dep[i] <= 0;
             end
         end
         else if (!rdy_in) begin
             // do nothing
         end
+        else if (rob_clear) begin
+            for (integer i = 0; i < 32; ++i) begin
+                dep[i] <= 0;
+                has_dep[i] <= 0;
+            end
+        end
         else begin
             if (set_reg_id) begin
+                $display(`LOG("RegisterFile"), "set reg[%d] = %x", set_reg_id, set_val);
                 regs[set_reg_id] <= set_val;
                 if (!set_dep_reg_id && set_reg_on_rob_id == dep[set_reg_id]) begin
                     has_dep[set_reg_id] <= 0;

@@ -9,6 +9,8 @@ module Cache (
     output wire [31:0] mem_a,     // address bus (only 17:0 is used)
     output wire        mem_wr,    // write/read signal (1 for write)
 
+    input wire rob_clear,
+
     input wire inst_valid,
     input wire [31:0] PC,
     output wire inst_ready,
@@ -83,7 +85,7 @@ module Cache (
     assign i_we = working && !work_type && mc_ready;
 
     always @(posedge clk_in) begin
-        if (rst_in) begin
+        if (rst_in | rob_clear) begin
             working   <= 0;
             work_type <= 0;
             mc_enable <= 0;

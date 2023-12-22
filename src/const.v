@@ -12,9 +12,8 @@
 `define ROB_WIDTH_BIT 5
 `define ROB_WIDTH (1 << `ROB_WIDTH_BIT)
 
-`define ROB_TYPE_BIT 2
 
-`define RS_TYPE_BIT 4
+`define RS_TYPE_BIT 5 // 1 I or R, 1 [30] and 3 func
 `define RS_SIZE_BIT 4
 
 
@@ -24,3 +23,14 @@
 // dword may not support
 `define LS_TYPE_BIT 4
 `define LSB_SIZE_BIT 4
+
+`define ROB_TYPE_BIT 2
+`define ROB_TYPE_RG 2'b00
+`define ROB_TYPE_ST 2'b01
+`define ROB_TYPE_BR 2'b10
+`define ROB_TYPE_EX 2'b11
+
+`define TIME  "[", $stime ,"]"
+`define ERR(X) `TIME, "[", `RED, X, `RESET, "]",
+`define WARN(X) `TIME, "[", `YELLOW, X, `RESET, "]",
+`define LOG(X) `TIME, "[", `BLUE, X, `RESET, "]",

@@ -1,229 +1,342 @@
+`include "const.v"
 // RISCV32I CPU top module
 // port modification allowed for debugging purposes
-
-`define RED "\033[31m"
-`define GREEN "\033[32m"
-`define YELLOW "\033[33m"
-`define BLUE "\033[34m"
-`define PURPLE "\033[35m"
-`define RESET "\033[0m"
 
 module cpu (
     input wire clk_in,  // system clock signal
     input wire rst_in,  // reset signal
     input wire rdy_in,  // ready signal, pause cpu when low
 
-    input  wire [ 7:0] mem_din,   // data input bus
-    output wire [ 7:0] mem_dout,  // data output bus
-    output wire [31:0] mem_a,     // address bus (only 17:0 is used)
-    output wire        mem_wr,    // write/read signal (1 for write)
+    input  wire [ 7 : 0] mem_din,   // data input bus
+    output wire [ 7 : 0] mem_dout,  // data output bus
+    output wire [31 : 0] mem_a,     // address bus (only 17 : 0 is used)
+    output wire          mem_wr,    // write/read signal (1 for write)
 
     input wire io_buffer_full,  // 1 if uart buffer is full
 
-    output wire [31:0] dbgreg_dout  // cpu register output (debugging demo)
+    output wire [31 : 0] dbgreg_dout  // cpu register output (debugging demo)
 );
 
     // implementation goes here
 
-    // Specifications:
+    // Specifications : 
     // - Pause cpu(freeze pc, registers, etc.) when rdy_in is low
     // - Memory read result will be returned in the next cycle. Write takes 1 cycle(no need to wait)
     // - Memory is of size 128KB, with valid address ranging from 0x0 to 0x20000
-    // - I/O port is mapped to address higher than 0x30000 (mem_a[17:16]==2'b11)
-    // - 0x30000 read: read a byte from input
-    // - 0x30000 write: write a byte to output (write 0x00 is ignored)
-    // - 0x30004 read: read clocks passed since cpu starts (in dword, 4 bytes)
-    // - 0x30004 write: indicates program stop (will output '\0' through uart tx)
+    // - I/O port is mapped to address higher than 0x30000 (mem_a[17 : 16]==2'b11)
+    // - 0x30000 read :  read a byte from input
+    // - 0x30000 write :  write a byte to output (write 0x00 is ignored)
+    // - 0x30004 read :  read clocks passed since cpu starts (in dword, 4 bytes)
+    // - 0x30004 write :  indicates program stop (will output '\0' through uart tx)
 
-    reg inst_valid;
-    reg [31:0] PC;
+    wire [                 4 : 0] set_reg_id;
+    wire [                31 : 0] set_val;
+    wire [`ROB_WIDTH_BIT - 1 : 0] set_reg_on_rob_id;
+    wire [                 4 : 0] set_dep_reg_id;
+    wire [`ROB_WIDTH_BIT - 1 : 0] set_dep_rob_id;
+    wire [                 4 : 0] get_id1;
+    wire [                31 : 0] get_val1;
+    wire                          get_has_dep1;
+    wire [`ROB_WIDTH_BIT - 1 : 0] get_dep1;
+    wire [                 4 : 0] get_id2;
+    wire [                31 : 0] get_val2;
+    wire                          get_has_dep2;
+    wire [`ROB_WIDTH_BIT - 1 : 0] get_dep2;
 
-    wire inst_ready;
-    wire [31:0] inst;
+    RegisterFile register_file (
+        .clk_in(clk_in),
+        .rst_in(rst_in),
+        .rdy_in(rdy_in),
 
-    reg data_valid;
-    reg data_wr;
-    reg [2:0] data_size;
-    reg [31:0] data_addr;
-    reg [31:0] data_value;
-    wire data_ready;
-    wire [31:0] data_res;
+        .rob_clear(rob_clear),
+
+        .set_reg_id       (set_reg_id),
+        .set_val          (set_val),
+        .set_reg_on_rob_id(set_reg_on_rob_id),
+        .set_dep_reg_id   (set_dep_reg_id),
+        .set_dep_rob_id   (set_dep_rob_id),
+
+        .get_id1     (get_id1),
+        .get_val1    (get_val1),
+        .get_has_dep1(get_has_dep1),
+        .get_dep1    (get_dep1),
+        .get_id2     (get_id2),
+        .get_val2    (get_val2),
+        .get_has_dep2(get_has_dep2),
+        .get_dep2    (get_dep2)
+    );
+
+    wire          icache_ready;
+    wire          if_need_inst;
+    wire [31 : 0] if_addr_needed;
+    wire [31 : 0] if_inst_in;
+    wire [31 : 0] if_addr_out;
+    wire [31 : 0] if_inst_out;
+
+    wire          lsb2cache_valid;
+    wire          lsb2cache_wr;
+    wire [ 2 : 0] lsb2cache_size;
+    wire [31 : 0] lsb2cache_addr;
+    wire [31 : 0] lsb2cache_value;
+    wire          cache2lsb_ready;
+    wire [31 : 0] cache2lsb_res;
 
     Cache cache (
         .clk_in(clk_in),
         .rst_in(rst_in),
         .rdy_in(rdy_in),
-        .mem_din(mem_din),
+
+        .mem_din (mem_din),
         .mem_dout(mem_dout),
-        .mem_a(mem_a),
-        .mem_wr(mem_wr),
+        .mem_a   (mem_a),
+        .mem_wr  (mem_wr),
 
-        .inst_valid(inst_valid),
-        .PC(PC),
-        .inst_ready(inst_ready),
-        .inst_res(inst),
+        .rob_clear(rob_clear),
 
-        .data_valid(data_valid),
-        .data_wr(data_wr),
-        .data_size(data_size),
-        .data_addr(data_addr),
-        .data_value(data_value),
-        .data_ready(data_ready),
-        .data_res(data_res)
+        .inst_valid(if_need_inst),
+        .PC        (if_addr_needed),
+        .inst_ready(icache_ready),
+        .inst_res  (if_inst_in),
+
+        .data_valid(lsb2cache_valid),
+        .data_wr   (lsb2cache_wr),
+        .data_size (lsb2cache_size),
+        .data_addr (lsb2cache_addr),
+        .data_value(lsb2cache_value),
+        .data_ready(cache2lsb_ready),
+        .data_res  (cache2lsb_res)
     );
 
-    reg  [ 4:0] reg_set_id;
-    reg  [31:0] reg_set_val;
-    wire [ 4:0] reg_get_id1;
-    wire [ 4:0] reg_get_id2;
-    wire [31:0] reg_get_val1;
-    wire [31:0] reg_get_val2;
+    wire          rob_clear;
+    wire          dc2if_clear;
+    wire [  31:0] dc2if_new_pc;
+    wire [31 : 0] rob2if_new_pc;
+    wire          if_ready;
 
-    RegisterFile regFile (
+    InstFetcher inst_fetcher (
         .clk_in(clk_in),
         .rst_in(rst_in),
         .rdy_in(rdy_in),
 
-        .set_reg_id(reg_set_id),
-        .set_val(reg_set_val),
+        .need_inst    (if_need_inst),
+        .PC           (if_addr_needed),
+        .inst_ready_in(icache_ready),
+        .inst_in      (if_inst_in),
 
-        .get_id1 (reg_get_id1),
-        .get_id2 (reg_get_id2),
-        .get_val1(reg_get_val1),
-        .get_val2(reg_get_val2)
+        .dc_clear      (dc2if_clear),
+        .dc_new_pc     (dc2if_new_pc),
+        .inst_ready_out(if_ready),
+        .inst_addr     (if_addr_out),
+        .inst_out      (if_inst_out),
+
+        .rob_clear (rob_clear),
+        .rob_new_pc(rob2if_new_pc)
     );
 
-    wire [  6:0] opcode = inst[6:0];
-    wire [  2:0] func = inst[14:12];
-    wire [  7:0] ex_func = inst[31:25];
 
-    wire [  4:0] rd = inst[11:7];
-    wire [  4:0] rs1 = inst[19:15];
-    wire [  4:0] rs2 = inst[24:20];
-    wire [31:12] immU = inst[31:12];
-    wire [ 20:1] immJ = {inst[31], inst[19:12], inst[20], inst[30:21]};
-    wire [ 11:0] immI = inst[31:20];
-    wire [ 12:1] immB = {inst[31], inst[7], inst[30:25], inst[11:8]};
-    wire [ 11:0] immS = {inst[31:25], inst[11:7]};
-    wire [  4:0] shamt = inst[24:20];
+    // from ReorderBuffer
+    wire                          rob_full;
+    wire [`ROB_WIDTH_BIT - 1 : 0] rob_id_tail;
+    // Decoder to ReorderBuffer
+    wire                          dc2rob_valid;
+    wire [ `ROB_TYPE_BIT - 1 : 0] dc2rob_type;
+    wire [                 4 : 0] dc2rob_reg_id;
+    wire [                31 : 0] dc2rob_value;
+    wire [                31 : 0] dc2rob_inst_addr;
+    wire [                31 : 0] dc2rob_jump_addr;
+    wire                          dc2rob_ready;
 
-    assign reg_get_id1 = rs1;
-    assign reg_get_id2 = rs2;
+    // from ReservationStation
+    wire                          rs_full;
+    // Decoder to ReservationStation
+    wire                          dc2rs_valid;
+    wire [  `RS_TYPE_BIT - 1 : 0] dc2rs_type;
+    wire [                31 : 0] dc2rs_r1;
+    wire [                31 : 0] dc2rs_r2;
+    wire [`ROB_WIDTH_BIT - 1 : 0] dc2rs_dep1;
+    wire [`ROB_WIDTH_BIT - 1 : 0] dc2rs_dep2;
+    wire                          dc2rs_has_dep1;
+    wire                          dc2rs_has_dep2;
+    wire [`ROB_WIDTH_BIT - 1 : 0] dc2rs_rob_id;
 
-    always @(posedge clk_in) begin
-        if (rst_in) begin
-            inst_valid <= 1;
-            PC <= 0;
-            data_valid <= 0;
-            data_wr <= 0;
-            data_size <= 0;
-            data_value <= 0;
-            data_addr <= 0;
-            reg_set_id <= 0;
-            reg_set_val <= 0;
-            Store.store_status <= 0;
-            Load.load_status <= 0;
-        end
-        else if (!rdy_in) begin
-            // do nothing
-        end
-        else if (!inst_ready) begin
-            // do nothing
-        end
-        else begin
-            // $display(`YELLOW, "inst %h at %h", inst, PC, `RESET);
-            case (opcode)
-                7'b0110111: begin : LUI
-                    reg_set_id <= rd;
-                    reg_set_val <= {immU, 12'b0};
-                    PC <= PC + 4;
-                end
-                7'b1101111: begin : JAL
-                    reg_set_id <= rd;
-                    reg_set_val <= PC + 4;
-                    PC <= PC + {{12{immJ[19]}}, immJ, 1'b0};
-                end
-                7'b1100111: begin : JALR
-                    PC <= (reg_get_val1 + {{20{immI[10]}}, immI}) & ~32'b1;
-                    reg_set_id <= rd;
-                    reg_set_val <= PC + 4;
-                end
-                7'b0010011: begin : Itype
-                    case (func)
-                        3'b000: begin : addi
-                            reg_set_id <= rd;
-                            reg_set_val <= reg_get_val1 + {{20{immI[10]}}, immI};
-                            PC <= PC + 4;
-                        end
-                        default: begin
-                            $display(`RED, "Itype %h at %h not support", inst, PC, `RESET);
-                            $finish();
-                        end
-                    endcase
-                end
-                7'b0100011: begin : Store
-                    reg store_status;
-                    if (!store_status) begin
-                        data_valid <= 1;
-                        data_wr <= 1;
-                        data_size <= func;
-                        data_addr <= reg_get_val1 + immS;
-                        data_value <= reg_get_val2;
-                        store_status <= 1;
-                    end
-                    else if (data_ready) begin
-                        PC <= PC + 4;
-                        data_valid <= 0;
-                        store_status <= 0;
-                    end
-                end
-                7'b0000011: begin : Load
-                    reg load_status;
-                    if (!load_status) begin
-                        data_valid <= 1;
-                        data_wr <= 0;
-                        data_size <= func;
-                        data_addr <= reg_get_val1 + immI;
-                        load_status <= 1;
-                    end
-                    else if (data_ready) begin
-                        reg_set_id <= rd;
-                        reg_set_val <= data_res;
-                        PC <= PC + 4;
-                        data_valid <= 0;
-                        load_status <= 0;
-                    end
-                end
-                7'b1100011: begin : Branch
-                    if (get_branch_result(reg_get_val1, reg_get_val2, func)) begin
-                        PC <= PC + {{20{immB[10]}}, immB, 1'b0};
-                        // $display(`BLUE, "branch cur=%h imm=%h to=%h", PC, {{20{immB[10]}}, immB, 1'b0}, PC + {{20{immB[10]}}, immB, 1'b0}, `RESET);
-                    end
-                    else begin
-                        PC <= PC + 4;
-                    end
-                end
-                default: begin
-                    $display(`RED, "inst %h at %h not support", inst, PC, `RESET);
-                    $finish();
-                end
-            endcase
-        end
-    end
+    // from LoadStoreBuffer
+    wire                          lsb_full;
+    // Decoder to LoadStoreBuffer
+    wire                          dc2lsb_valid;
+    wire [  `LS_TYPE_BIT - 1 : 0] dc2lsb_type;
+    wire [                31 : 0] dc2lsb_r1;
+    wire [                31 : 0] dc2lsb_r2;
+    wire [`ROB_WIDTH_BIT - 1 : 0] dc2lsb_dep1;
+    wire [`ROB_WIDTH_BIT - 1 : 0] dc2lsb_dep2;
+    wire                          dc2lsb_has_dep1;
+    wire                          dc2lsb_has_dep2;
+    wire [                11 : 0] dc2lsb_offset;
+    wire [`ROB_WIDTH_BIT - 1 : 0] dc2lsb_rob_id;
+
+    Decoder decoder (
+        .clk_in(clk_in),
+        .rst_in(rst_in | rob_clear),
+        .rdy_in(rdy_in),
+
+        .valid    (if_ready),
+        .inst_addr(if_addr_out),
+        .inst     (if_inst_out),
+
+        .get_reg_id1(get_id1),
+        .rs1_val_in (get_val1),
+        .has_dep1   (get_has_dep1),
+        .dep1       (get_dep1),
+        .get_reg_id2(get_id2),
+        .rs2_val_in (get_val2),
+        .has_dep2   (get_has_dep2),
+        .dep2       (get_dep2),
+
+        .rob_full     (rob_full),
+        .rob_free_id  (rob_id_tail),
+        .rob_valid    (dc2rob_valid),
+        .rob_type     (dc2rob_type),
+        .rob_reg_id   (dc2rob_reg_id),
+        .rob_value    (dc2rob_value),
+        .rob_inst_addr(dc2rob_inst_addr),
+        .rob_jump_addr(dc2rob_jump_addr),
+        .rob_ready    (dc2rob_ready),
+
+        .rs_full    (rs_full),
+        .rs_valid   (dc2rs_valid),
+        .rs_type    (dc2rs_type),
+        .rs_r1      (dc2rs_r1),
+        .rs_r2      (dc2rs_r2),
+        .rs_dep1    (dc2rs_dep1),
+        .rs_dep2    (dc2rs_dep2),
+        .rs_has_dep1(dc2rs_has_dep1),
+        .rs_has_dep2(dc2rs_has_dep2),
+        .rs_rob_id  (dc2rs_rob_id),
+
+        .lsb_full    (lsb_full),
+        .lsb_valid   (dc2lsb_valid),
+        .lsb_type    (dc2lsb_type),
+        .lsb_r1      (dc2lsb_r1),
+        .lsb_r2      (dc2lsb_r2),
+        .lsb_dep1    (dc2lsb_dep1),
+        .lsb_dep2    (dc2lsb_dep2),
+        .lsb_has_dep1(dc2lsb_has_dep1),
+        .lsb_has_dep2(dc2lsb_has_dep2),
+        .lsb_offset  (dc2lsb_offset),
+        .lsb_rob_id  (dc2lsb_rob_id),
+
+        .if_clear(dc2if_clear),
+        .if_set_addr(dc2if_new_pc)
+    );
 
 
-    function get_branch_result;
-        input [31:0] val1;
-        input [31:0] val2;
-        input [2:0] func;
-        case (func)
-            3'b000:  get_branch_result = val1 == val2;
-            3'b001:  get_branch_result = val1 != val2;
-            3'b100:  get_branch_result = $signed(val1) < $signed(val2);
-            3'b101:  get_branch_result = $signed(val1) >= $signed(val2);
-            3'b110:  get_branch_result = $unsigned(val1) < $unsigned(val2);
-            3'b111:  get_branch_result = $unsigned(val1) >= $unsigned(val2);
-            default: get_branch_result = 0;
-        endcase
-    endfunction
+    // from ReorderBuffer
+    wire                          rob_empty;
+    wire [`ROB_WIDTH_BIT - 1 : 0] rob_id_head;
+
+    // output of LoadStoreBuffer
+    wire                          lsb_ready;
+    wire [`ROB_WIDTH_BIT - 1 : 0] lsb_rob_id;
+    wire [                31 : 0] lsb_value;
+    // output of ReservationStation
+    wire                          rs_ready;
+    wire [`ROB_WIDTH_BIT - 1 : 0] rs_rob_id;
+    wire [                31 : 0] rs_value;
+
+    ReservationStaion rs (
+        .clk_in(clk_in),
+        .rst_in(rst_in),
+        .rdy_in(rdy_in),
+
+        .inst_valid   (dc2rs_valid),
+        .inst_type    (dc2rs_type),
+        .inst_rob_id  (dc2rs_rob_id),
+        .inst_r1      (dc2rs_r1),
+        .inst_r2      (dc2rs_r2),
+        .inst_dep1    (dc2rs_dep1),
+        .inst_dep2    (dc2rs_dep2),
+        .inst_has_dep1(dc2rs_has_dep1),
+        .inst_has_dep2(dc2rs_has_dep2),
+
+        .full(rs_full),
+
+        .rs_ready  (rs_ready),
+        .rs_rob_id (rs_rob_id),
+        .rs_value  (rs_value),
+        .lsb_ready (lsb_ready),
+        .lsb_rob_id(lsb_rob_id),
+        .lsb_value (lsb_value)
+    );
+
+    LoadStoreBuffer lsb (
+        .clk_in(clk_in),
+        .rst_in(rst_in | rob_clear),
+        .rdy_in(rdy_in),
+
+        .inst_valid   (dc2lsb_valid),
+        .inst_type    (dc2lsb_type),
+        .inst_r1      (dc2lsb_r1),
+        .inst_r2      (dc2lsb_r2),
+        .inst_dep1    (dc2lsb_dep1),
+        .inst_dep2    (dc2lsb_dep2),
+        .inst_has_dep1(dc2lsb_has_dep1),
+        .inst_has_dep2(dc2lsb_has_dep2),
+        .inst_offset  (dc2lsb_offset),
+        .inst_rob_id  (dc2lsb_rob_id),
+
+        .full(lsb_full),
+
+        .cache_valid(lsb2cache_valid),
+        .cache_wr   (lsb2cache_wr),
+        .cache_size (lsb2cache_size),
+        .cache_addr (lsb2cache_addr),
+        .cache_value(lsb2cache_value),
+        .cache_ready(cache2lsb_ready),
+        .cache_res  (cache2lsb_res),
+
+        .rob_empty  (rob_empty),
+        .rob_id_head(rob_id_head),
+
+        .rs_ready (rs_ready),
+        .rs_rob_id(rs_rob_id),
+        .rs_value (rs_value),
+
+        .lsb_ready (lsb_ready),
+        .lsb_rob_id(lsb_rob_id),
+        .lsb_value (lsb_value)
+    );
+
+    ReorderBuffer rob (
+        .clk_in(clk_in),
+        .rst_in(rst_in),
+        .rdy_in(rdy_in),
+
+        .inst_valid    (dc2rob_valid),
+        .inst_ready    (dc2rob_ready),
+        .inst_type     (dc2rob_type),
+        .inst_rd       (dc2rob_reg_id),
+        .inst_value    (dc2rob_value),
+        .inst_pc       (dc2rob_inst_addr),
+        .inst_jump_addr(dc2rob_jump_addr),
+
+        .rs_ready  (rs_ready),
+        .rs_rob_id (rs_rob_id),
+        .rs_value  (rs_value),
+        .lsb_ready (lsb_ready),
+        .lsb_rob_id(lsb_rob_id),
+        .lsb_value (lsb_value),
+
+        .full (rob_full),
+        .empty(rob_empty),
+        .rob_id_head(rob_id_head),
+        .rob_id_tail(rob_id_tail),
+
+        .set_reg_id       (set_reg_id),
+        .set_val          (set_val),
+        .set_reg_on_rob_id(set_reg_on_rob_id),
+        .set_dep_reg_id   (set_dep_reg_id),
+        .set_dep_rob_id   (set_dep_rob_id),
+
+        .clear (rob_clear),
+        .new_pc(rob2if_new_pc)
+    );
 endmodule

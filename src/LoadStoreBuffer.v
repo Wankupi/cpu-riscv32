@@ -34,6 +34,10 @@ module LoadStoreBuffer #(
     input  wire        cache_ready,
     input  wire [31:0] cache_res,
 
+    // from ReorderBuffer
+    input wire                          rob_empty,
+    input wire [`ROB_WIDTH_BIT - 1 : 0] rob_id_head,
+
     // from ReservationStation
     input wire                          rs_ready,
     input wire [`ROB_WIDTH_BIT - 1 : 0] rs_rob_id,
@@ -76,12 +80,14 @@ module LoadStoreBuffer #(
 
     assign cache_valid = work;
 
+    reg [31:0] dbg_size;
+
     always @(posedge clk_in) begin
         if (rst_in) begin
             head <= 0;
             tail <= 0;
             work <= 0;
-            for (integer i = 0; i < LSB_SIZE; i = i + 1) begin
+            for (integer i = 0; i < LSB_SIZE; i = i + 1) begin : RESET
                 busy[i] <= 0;
                 rob_id[i] <= 0;
                 work_type[i] <= 0;
@@ -92,6 +98,7 @@ module LoadStoreBuffer #(
                 dep1[i] <= 0;
                 dep2[i] <= 0;
             end
+            dbg_size <= 0;
         end
         else if (!rdy_in) begin
             // do nothing
@@ -124,7 +131,10 @@ module LoadStoreBuffer #(
                 busy[head] <= 0;
             end
 
-            for (integer i = 0; i < LSB_SIZE; i = i + 1) begin
+            if (inst_valid && !pop_able) dbg_size <= dbg_size + 1;
+            else if (!inst_valid && pop_able) dbg_size <= dbg_size - 1;
+
+            for (integer i = 0; i < LSB_SIZE; i = i + 1) begin : UPDATE
                 if (busy[i]) begin
                     if (rs_ready && has_dep1[i] && (rs_rob_id == dep1[i])) begin
                         r1[i] <= rs_value;

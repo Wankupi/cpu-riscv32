@@ -46,10 +46,10 @@ module ReorderBuffer #(
 
     localparam ROB_SIZE = 1 << ROB_SIZE_BIT;
 
-    localparam TypeRg = `ROB_TYPE_BIT'b00;
-    localparam TypeSt = `ROB_TYPE_BIT'b01;
-    localparam TypeBr = `ROB_TYPE_BIT'b10;
-    localparam TypeEx = `ROB_TYPE_BIT'b11;
+    localparam TypeRg = `ROB_TYPE_RG;
+    localparam TypeSt = `ROB_TYPE_ST;
+    localparam TypeBr = `ROB_TYPE_BR;
+    localparam TypeEx = `ROB_TYPE_EX;
 
     reg                       busy     [0 : ROB_SIZE - 1];
     reg                       ready    [0 : ROB_SIZE - 1];
@@ -60,6 +60,8 @@ module ReorderBuffer #(
     reg [               31:0] jump_addr[0 : ROB_SIZE - 1];
 
     reg [ROB_SIZE_BIT - 1:0] head, tail;
+
+    reg [31:0] dbg_size;
 
     always @(posedge clk_in) begin
         if (rst_in || clear) begin
@@ -74,6 +76,9 @@ module ReorderBuffer #(
                 inst_addr[i] <= 0;
                 jump_addr[i] <= 0;
             end
+            head <= 0;
+            tail <= 0;
+            dbg_size <= 0;
         end
         else if (!rdy_in) begin
             // do nothing
@@ -88,10 +93,11 @@ module ReorderBuffer #(
                 value[lsb_rob_id] <= lsb_value;
             end
             if (inst_valid) begin
-                if (full) begin
-                    $display("ReorderBuffer full but still adding");
+                if (busy[tail]) begin
+                    $display(`ERR("RoB"), "full but still adding");
                     $finish();
                 end
+                $display(`LOG("RoB"), ": add inst %x", inst_pc);
                 tail <= tail + 1;
                 busy[tail] <= 1;
                 ready[tail] <= inst_ready;
@@ -122,6 +128,9 @@ module ReorderBuffer #(
                     end
                 endcase
             end
+
+            if (inst_valid && !(busy[head] && ready[head])) dbg_size <= dbg_size + 1;
+            else if (!inst_valid && (busy[head] && ready[head])) dbg_size <= dbg_size - 1;
         end
     end
 
@@ -133,9 +142,12 @@ module ReorderBuffer #(
 
     wire need_set_reg = (rdy_in && busy[head] && ready[head] && work_type[head] == TypeRg);
     assign set_reg_id = need_set_reg ? rd[head] : 0;
+    assign set_reg_on_rob_id = head;
     assign set_val = value[head];
 
     assign set_dep_reg_id = (rdy_in && inst_valid) ? inst_rd : 0;
     assign set_dep_rob_id = (rdy_in && inst_valid) ? tail : 0;
 
+
+    wire [`ROB_TYPE_BIT -  1:0] dbg_head_work_type = work_type[head];
 endmodule
