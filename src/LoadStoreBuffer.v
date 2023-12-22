@@ -72,15 +72,19 @@ module LoadStoreBuffer #(
     assign pop_able  = cache_ready;
 
     // is_working
-    reg  work;
+    reg work;
     // k : which slot to shot
-    wire k = work ? head + 1 : head;
+    wire [LSB_SIZE_BIT - 1 : 0] k = work ? head + 1 : head;
     wire shot_able = busy[k] && !has_dep1[k] && !has_dep2[k];
     wire shot_this_cycle = shot_able && (!work || cache_ready);
 
     assign cache_valid = work;
 
     reg [31:0] dbg_size;
+
+    wire dbg_busyk = busy[k];
+    wire dbg_has_dep1k = has_dep1[k];
+    wire dbg_has_dep2k = has_dep2[k];
 
     always @(posedge clk_in) begin
         if (rst_in) begin
