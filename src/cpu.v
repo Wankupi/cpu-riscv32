@@ -43,6 +43,13 @@ module cpu (
     wire                          get_has_dep2;
     wire [`ROB_WIDTH_BIT - 1 : 0] get_dep2;
 
+    wire [`ROB_WIDTH_BIT - 1 : 0] get_rob_id1;
+    wire                          rob_value1_ready;
+    wire [                  31:0] rob_value1;
+    wire [`ROB_WIDTH_BIT - 1 : 0] get_rob_id2;
+    wire                          rob_value2_ready;
+    wire [                  31:0] rob_value2;
+
     RegisterFile register_file (
         .clk_in(clk_in),
         .rst_in(rst_in),
@@ -63,7 +70,14 @@ module cpu (
         .get_id2     (get_id2),
         .get_val2    (get_val2),
         .get_has_dep2(get_has_dep2),
-        .get_dep2    (get_dep2)
+        .get_dep2    (get_dep2),
+
+        .get_rob_id1     (get_rob_id1),
+        .rob_value1_ready(rob_value1_ready),
+        .rob_value1      (rob_value1),
+        .get_rob_id2     (get_rob_id2),
+        .rob_value2_ready(rob_value2_ready),
+        .rob_value2      (rob_value2)
     );
 
     wire          icache_ready;
@@ -318,6 +332,13 @@ module cpu (
         .inst_pc       (dc2rob_inst_addr),
         .inst_jump_addr(dc2rob_jump_addr),
 
+        .get_rob_id1     (get_rob_id1),
+        .rob_value1_ready(rob_value1_ready),
+        .rob_value1      (rob_value1),
+        .get_rob_id2     (get_rob_id2),
+        .rob_value2_ready(rob_value2_ready),
+        .rob_value2      (rob_value2),
+
         .rs_ready  (rs_ready),
         .rs_rob_id (rs_rob_id),
         .rs_value  (rs_value),
@@ -325,7 +346,7 @@ module cpu (
         .lsb_rob_id(lsb_rob_id),
         .lsb_value (lsb_value),
 
-        .full (rob_full),
+        .full(rob_full),
         .empty(rob_empty),
         .rob_id_head(rob_id_head),
         .rob_id_tail(rob_id_tail),

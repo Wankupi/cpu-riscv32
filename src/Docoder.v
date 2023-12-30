@@ -22,7 +22,7 @@ module Decoder (
     // from ReorderBuffer
     input  wire                          rob_full,
     input  wire [`ROB_WIDTH_BIT - 1 : 0] rob_free_id,
-    // to ReorderBuffer // TODO:
+    // to ReorderBuffer
     output reg                           rob_valid,
     output reg  [ `ROB_TYPE_BIT - 1 : 0] rob_type,
     output reg  [                   4:0] rob_reg_id,
@@ -96,7 +96,7 @@ module Decoder (
     wire use_reg_s1 = opcode == CodeJalr || opcode == CodeBr || opcode == CodeLoad || opcode == CodeStore || opcode == CodeArithI || opcode == CodeArithR;
     wire use_reg_s2 = opcode == CodeBr || opcode == CodeStore || opcode == CodeArithR;
 
-    wire [31:0] next_rs2_val = opcode == CodeArithI ? ((func == 3'b001 || func == 3'b101) ? shamt : immI) : rs2_val_in;
+    wire [31:0] next_rs2_val = opcode == CodeArithI ? ((func == 3'b001 || func == 3'b101) ? shamt : {{20{immI[11]}}, immI}) : rs2_val_in;
 
     reg [31:0] last_inst_addr;
     reg [31:0] rs1_val, rs2_val;
@@ -125,6 +125,7 @@ module Decoder (
             lsb_valid <= 0;
             lsb_type <= 0;
             if_clear <= 0;
+            if_set_addr <= 0;
         end
         else if (!rdy_in) begin
             // do nothing
@@ -142,10 +143,9 @@ module Decoder (
             rs_valid <= need_RS;
             lsb_valid <= need_LSB;
 
-            rs_type <= {(opcode == CodeBr), inst[30], func};
+            rs_type <= {(opcode == CodeArithR && inst[25]), (opcode == CodeBr), (opcode == CodeArithR && inst[30]), func};
             lsb_type <= {(opcode == CodeLoad ? 1'b0 : 1'b1), func};
-            rob_type <= inst == 32'hff9ff06f  ? `ROB_TYPE_EX : opcode == CodeStore ? `ROB_TYPE_ST : opcode == CodeBr ? `ROB_TYPE_BR : `ROB_TYPE_RG;
-            // TODO: rob_type: EXIT
+            rob_type <= inst == 32'hff9ff06f ? `ROB_TYPE_EX : opcode == CodeStore ? `ROB_TYPE_ST : opcode == CodeBr ? `ROB_TYPE_BR : `ROB_TYPE_RG;
 
             rs1_val <= rs1_val_in;
             rs2_val <= next_rs2_val;
@@ -158,7 +158,7 @@ module Decoder (
             rob_reg_id <= rd;
             rob_inst_addr <= inst_addr;
             // without predictor, default not branch
-            rob_jump_addr <= inst_addr + {{20{immB[10]}}, immB, 1'b0};
+            rob_jump_addr <= inst_addr + {{19{immB[11]}}, immB, 1'b0};
             rob_ready <= opcode == CodeLui || opcode == CodeAupic || opcode == CodeJal || opcode == CodeJalr;
 
             case (opcode)
@@ -184,6 +184,8 @@ module Decoder (
                 CodeBr: begin
                     if_clear <= 1'b1;
                     if_set_addr <= inst_addr + 4;
+                end
+                CodeArithR: begin
                 end
 
                 default: begin

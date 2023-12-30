@@ -39,6 +39,10 @@ module scalar_alu (
         else begin
             ready  <= 1'b1;
             rob_id <= inst_rob_id;
+
+            if (work_type[5]) begin  // RV32M extension
+                $display(`ERR("AluScalar"), "RV32M extension is not supported yet");
+            end
             if (work_type[4]) begin
                 case (work_type[2:0])
                     3'b000: value <= r1 == r2;

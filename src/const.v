@@ -1,6 +1,7 @@
 `define VectorSize 32
 
 `define DEBUG
+`define SHORT_DEBUG
 
 `define RED "\033[31m"
 `define GREEN "\033[32m"
@@ -13,7 +14,7 @@
 `define ROB_WIDTH (1 << `ROB_WIDTH_BIT)
 
 
-`define RS_TYPE_BIT 5 // 1 I or R, 1 [30] and 3 func
+`define RS_TYPE_BIT 6 // 1 [25]: RV32M, 1 Br, 1 [30] and 3 func
 `define RS_SIZE_BIT 4
 
 
@@ -30,7 +31,20 @@
 `define ROB_TYPE_BR 2'b10
 `define ROB_TYPE_EX 2'b11
 
-`define TIME  "[", $stime ,"]"
+
+
+`ifdef SHORT_DEBUG
+
+`define TIME // "[", $stime ,"]"
+`define ERR(X) // `TIME, "[", `RED, X, `RESET, "]",
+`define WARN(X) // `TIME, "[", `YELLOW, X, `RESET, "]",
+`define LOG(X) // `TIME, "[", `BLUE, X, `RESET, "]",
+
+`else
+
+`define TIME "[", $stime ,"]"
 `define ERR(X) `TIME, "[", `RED, X, `RESET, "]",
 `define WARN(X) `TIME, "[", `YELLOW, X, `RESET, "]",
 `define LOG(X) `TIME, "[", `BLUE, X, `RESET, "]",
+
+`endif

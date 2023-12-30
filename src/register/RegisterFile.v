@@ -21,18 +21,28 @@ module RegisterFile (
     input  wire [                 4:0] get_id2,
     output wire [                31:0] get_val2,
     output wire                        get_has_dep2,
-    output wire [`ROB_WIDTH_BIT - 1:0] get_dep2
+    output wire [`ROB_WIDTH_BIT - 1:0] get_dep2,
+
+    // between ReorderBuffer and Register
+    output wire [`ROB_WIDTH_BIT - 1 : 0] get_rob_id1,
+    input  wire                          rob_value1_ready,
+    input  wire [                  31:0] rob_value1,
+    output wire [`ROB_WIDTH_BIT - 1 : 0] get_rob_id2,
+    input  wire                          rob_value2_ready,
+    input  wire [                  31:0] rob_value2
 );
     reg [31:0] regs[0:31];
     reg [`ROB_WIDTH_BIT - 1:0] dep[0:31];
     reg has_dep[0:31];
 
-    assign get_val1 = regs[get_id1];
-    assign get_val2 = regs[get_id2];
-    assign get_has_dep1 = has_dep[get_id1];
-    assign get_has_dep2 = has_dep[get_id2];
+    assign get_val1 = has_dep[get_dep1] ? rob_value1 : regs[get_id1];
+    assign get_val2 = has_dep[get_dep2] ? rob_value2 : regs[get_id2];
+    assign get_has_dep1 = has_dep[get_id1] && !rob_value1_ready;
+    assign get_has_dep2 = has_dep[get_id2] && !rob_value2_ready;
     assign get_dep1 = dep[get_id1];
     assign get_dep2 = dep[get_id2];
+    assign get_rob_id1 = get_dep1;
+    assign get_rob_id2 = get_dep2;
 
     always @(posedge clk_in) begin
         if (rst_in) begin
@@ -53,7 +63,7 @@ module RegisterFile (
         end
         else begin
             if (set_reg_id) begin
-                $display(`LOG("RegisterFile"), "set reg[%d] = %x", set_reg_id, set_val);
+                // $display(`LOG("RegisterFile"), "set reg[%d] = %x", set_reg_id, set_val);
                 regs[set_reg_id] <= set_val;
                 if (!set_dep_reg_id && set_reg_on_rob_id == dep[set_reg_id]) begin
                     has_dep[set_reg_id] <= 0;

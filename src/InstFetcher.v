@@ -39,7 +39,7 @@ module InstFetcher (
             inst_out <= 0;
             stall <= 0;
         end
-        else if (inst_ready_in) begin
+        else if (inst_ready_in && inst_in && !stall) begin
             PC <= next_PC;
             inst_ready_out <= 1;
             inst_addr <= PC;

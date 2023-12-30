@@ -75,7 +75,7 @@ module LoadStoreBuffer #(
     reg work;
     // k : which slot to shot
     wire [LSB_SIZE_BIT - 1 : 0] k = work ? head + 1 : head;
-    wire shot_able = busy[k] && !has_dep1[k] && !has_dep2[k];
+    wire shot_able = busy[k] && !has_dep1[k] && !has_dep2[k] && (!work_type[k][3] || rob_id[k] == rob_id_head);
     wire shot_this_cycle = shot_able && (!work || cache_ready);
 
     assign cache_valid = work;
@@ -85,6 +85,7 @@ module LoadStoreBuffer #(
     wire dbg_busyk = busy[k];
     wire dbg_has_dep1k = has_dep1[k];
     wire dbg_has_dep2k = has_dep2[k];
+    wire dbg_robidk = rob_id[k];
 
     always @(posedge clk_in) begin
         if (rst_in) begin
@@ -101,6 +102,7 @@ module LoadStoreBuffer #(
                 has_dep2[i] <= 0;
                 dep1[i] <= 0;
                 dep2[i] <= 0;
+                offset[i] <= 0;
             end
             dbg_size <= 0;
         end
@@ -121,12 +123,12 @@ module LoadStoreBuffer #(
                 busy[tail] <= 1;
                 rob_id[tail] <= inst_rob_id;
                 work_type[tail] <= inst_type;
-                r1[tail] <= inst_r1;
-                r2[tail] <= inst_r2;
+                r1[tail] <= !inst_has_dep1 ? inst_r1 : inst_dep1 == rs_rob_id ? rs_value : inst_dep1 == lsb_rob_id ? lsb_value : 32'b0;
+                r2[tail] <= !inst_has_dep2 ? inst_r2 : inst_dep2 == rs_rob_id ? rs_value : inst_dep2 == lsb_rob_id ? lsb_value : 32'b0;
                 dep1[tail] <= inst_dep1;
                 dep2[tail] <= inst_dep2;
-                has_dep1[tail] <= inst_has_dep1;
-                has_dep2[tail] <= inst_has_dep2;
+                has_dep1[tail] <= inst_has_dep1 && inst_dep1 != rs_rob_id && inst_dep1 != lsb_rob_id;
+                has_dep2[tail] <= inst_has_dep2 && inst_dep2 != rs_rob_id && inst_dep2 != lsb_rob_id;
                 offset[tail] <= inst_offset;
             end
             // pop
@@ -164,11 +166,11 @@ module LoadStoreBuffer #(
     assign full = full_real && !shot_able;
 
     assign cache_wr = work_type[head][3];
-    assign cache_addr = r1[head] + offset[head];
+    assign cache_addr = r1[head] + {{20{offset[head][11]}}, offset[head]};
     assign cache_size = work_type[head][2:0];
     assign cache_value = r2[head];
 
     assign lsb_ready = cache_ready;
-    assign lsb_rob_id = rob_id[head];
-    assign lsb_value = cache_res;
+    assign lsb_rob_id = lsb_ready ? rob_id[head] : 0;
+    assign lsb_value = lsb_ready ? cache_res : 0;
 endmodule
