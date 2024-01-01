@@ -71,8 +71,12 @@ module ReorderBuffer #(
 
     reg [31:0] dbg_size, dbg_stall;
     wire [31:0] dbg_pc_head = inst_addr[head];
+    reg [31:0] dbg_commited;
+    wire dbg_ready_head = ready[head];
+    wire dbg_ready18 = ready[18];
 
     always @(posedge clk_in) begin
+        if (rst_in) dbg_commited <= 1;
         if (rst_in || clear) begin
             clear  <= 0;
             new_pc <= 0;
@@ -103,7 +107,7 @@ module ReorderBuffer #(
                 value[lsb_rob_id] <= lsb_value;
             end
             if (inst_valid) begin
-                if (full) begin
+                if (head == tail && busy[head] && !ready[head]) begin
                     $display(`ERR("RoB"), "full but still adding");
                     $finish();
                 end
@@ -118,6 +122,11 @@ module ReorderBuffer #(
                 jump_addr[tail] <= inst_jump_addr;
             end
             if (busy[head] && ready[head]) begin
+                dbg_commited <= dbg_commited + 1;
+
+`ifdef DEBUG
+                $write("[%5d] ", dbg_commited);
+`endif
                 head <= head + 1;
                 busy[head] <= 0;
                 ready[head] <= 0;
@@ -125,13 +134,13 @@ module ReorderBuffer #(
                     TypeRg: begin
                         // things are done by wire
 `ifdef DEBUG
-                        $display(`LOG("RoB"), "%h", inst_addr[head], " reg[%d] = %8h", rd[head], value[head]);
+                        $display("%h", inst_addr[head], " reg[%d] = %8h", rd[head], value[head]);
 `endif
                     end
                     TypeSt: begin
                         // do nothing
 `ifdef DEBUG
-                        $display(`LOG("RoB"), "%h", inst_addr[head], " st");
+                        $display("%h", inst_addr[head], " st");
 `endif
                     end
                     TypeBr: begin
@@ -140,7 +149,8 @@ module ReorderBuffer #(
                             clear  <= 1;
                         end
 `ifdef DEBUG
-                        $display(`LOG("RoB"), "%h", inst_addr[head], " br %8h", value[head] ? jump_addr[head] : inst_addr[head] + 4);
+                        $display("%h", inst_addr[head], " br %8h", value[head] ? jump_addr[head] : inst_addr[head] + 4);
+                        // if (inst_addr[head] == 32'h0000104c) $display($time);
 `endif
                     end
                     TypeEx: begin
@@ -151,18 +161,16 @@ module ReorderBuffer #(
 
             if (inst_valid && !(busy[head] && ready[head])) dbg_size <= dbg_size + 1;
             else if (!inst_valid && (busy[head] && ready[head])) dbg_size <= dbg_size - 1;
-            if (busy[head]) begin
-                if (ready[head]) dbg_stall <= 0;
-                else dbg_stall <= dbg_stall + 1;
-                if (dbg_stall > 50) begin
-                    $display(`ERR("RoB"), "stall too long");
-                    $finish();
-                end
+            if (ready[head]) dbg_stall <= 0;
+            else dbg_stall <= dbg_stall + 1;
+            if (dbg_stall > 50) begin
+                $display(`ERR("RoB"), "stall too long");
+                $finish();
             end
         end
     end
 
-    assign full = head == tail && busy[head];
+    assign full = (head == tail && busy[head]) || (tail + `ROB_WIDTH_BIT'b1 == head && inst_valid && !ready[head]);
     assign empty = head == tail && !busy[head];
 
     assign rob_id_head = head;
@@ -177,10 +185,10 @@ module ReorderBuffer #(
     assign set_dep_reg_id = need_set_dep ? inst_rd : 0;
     assign set_dep_rob_id = need_set_dep ? tail : 0;
 
-    assign rob_value1_ready = ready[get_rob_id1];
-    assign rob_value1 = value[get_rob_id1];
-    assign rob_value2_ready = ready[get_rob_id2];
-    assign rob_value2 = value[get_rob_id2];
+    assign rob_value1_ready = ready[get_rob_id1] || (rs_ready && rs_rob_id == get_rob_id1) || (lsb_ready && lsb_rob_id == get_rob_id1);
+    assign rob_value1 = ready[get_rob_id1] ? value[get_rob_id1] : (rs_ready && rs_rob_id == get_rob_id1) ? rs_value : (lsb_ready && lsb_rob_id == get_rob_id1) ? lsb_value : 32'b0;
+    assign rob_value2_ready = ready[get_rob_id2] || (rs_ready && rs_rob_id == get_rob_id2) || (lsb_ready && lsb_rob_id == get_rob_id2);
+    assign rob_value2 = ready[get_rob_id2] ? value[get_rob_id2] : (rs_ready && rs_rob_id == get_rob_id2) ? rs_value : (lsb_ready && lsb_rob_id == get_rob_id2) ? lsb_value : 32'b0;
 
     wire [`ROB_TYPE_BIT -  1:0] dbg_head_work_type = work_type[head];
 endmodule

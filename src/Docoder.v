@@ -103,6 +103,8 @@ module Decoder (
     reg is_dep1, is_dep2;
     reg [`ROB_WIDTH_BIT - 1 : 0] dep1_val, dep2_val;
 
+    wire predict_jump = 1'b1;  // always true
+
     always @(posedge clk_in) begin
         if (rst_in) begin
             last_inst_addr <= 32'hffffffff;
@@ -158,7 +160,7 @@ module Decoder (
             rob_reg_id <= rd;
             rob_inst_addr <= inst_addr;
             // without predictor, default not branch
-            rob_jump_addr <= inst_addr + {{19{immB[11]}}, immB, 1'b0};
+            rob_jump_addr <= inst_addr + (predict_jump ? 5 : {{19{immB[11]}}, immB, 1'b0});
             rob_ready <= opcode == CodeLui || opcode == CodeAupic || opcode == CodeJal || opcode == CodeJalr;
 
             case (opcode)
@@ -183,7 +185,7 @@ module Decoder (
                 end
                 CodeBr: begin
                     if_clear <= 1'b1;
-                    if_set_addr <= inst_addr + 4;
+                    if_set_addr <= inst_addr + (predict_jump ? {{19{immB[11]}}, immB, 1'b0} : 4);
                 end
                 CodeArithR: begin
                 end

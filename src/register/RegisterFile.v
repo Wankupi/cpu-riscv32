@@ -67,8 +67,9 @@ module RegisterFile (
             if (set_reg_id) begin
                 // $display(`LOG("RegisterFile"), "set reg[%d] = %x", set_reg_id, set_val);
                 regs[set_reg_id] <= set_val;
-                if (!set_dep_reg_id && set_reg_on_rob_id == dep[set_reg_id]) begin
+                if (set_dep_reg_id != set_reg_id && set_reg_on_rob_id == dep[set_reg_id]) begin
                     has_dep[set_reg_id] <= 0;
+                    dep[set_reg_id] <= 0;
                 end
             end
             if (set_dep_reg_id) begin
@@ -78,7 +79,7 @@ module RegisterFile (
         end
     end
 
-`ifdef DEBUG
+    `ifdef DEBUG
     generate
         genvar idx;
         for (idx = 0; idx < 32; idx = idx + 1) begin : rv
@@ -86,6 +87,6 @@ module RegisterFile (
             assign regv = regs[idx];
         end
     endgenerate
-`endif
+    `endif
 
 endmodule
