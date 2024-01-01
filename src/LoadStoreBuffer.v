@@ -123,12 +123,12 @@ module LoadStoreBuffer #(
                 busy[tail] <= 1;
                 rob_id[tail] <= inst_rob_id;
                 work_type[tail] <= inst_type;
-                r1[tail] <= !inst_has_dep1 ? inst_r1 : inst_dep1 == rs_rob_id ? rs_value : inst_dep1 == lsb_rob_id ? lsb_value : 32'b0;
-                r2[tail] <= !inst_has_dep2 ? inst_r2 : inst_dep2 == rs_rob_id ? rs_value : inst_dep2 == lsb_rob_id ? lsb_value : 32'b0;
+                r1[tail] <= !inst_has_dep1 ? inst_r1 : rs_ready && inst_dep1 == rs_rob_id ? rs_value : lsb_ready && inst_dep1 == lsb_rob_id ? lsb_value : 32'b0;
+                r2[tail] <= !inst_has_dep2 ? inst_r2 : rs_ready && inst_dep2 == rs_rob_id ? rs_value : lsb_ready && inst_dep2 == lsb_rob_id ? lsb_value : 32'b0;
                 dep1[tail] <= inst_dep1;
                 dep2[tail] <= inst_dep2;
-                has_dep1[tail] <= inst_has_dep1 && inst_dep1 != rs_rob_id && inst_dep1 != lsb_rob_id;
-                has_dep2[tail] <= inst_has_dep2 && inst_dep2 != rs_rob_id && inst_dep2 != lsb_rob_id;
+                has_dep1[tail] <= inst_has_dep1 && !(rs_ready && inst_dep1 == rs_rob_id) && !(lsb_ready && inst_dep1 == lsb_rob_id);
+                has_dep2[tail] <= inst_has_dep2 && !(rs_ready && inst_dep2 == rs_rob_id) && !(lsb_ready && inst_dep2 == lsb_rob_id);
                 offset[tail] <= inst_offset;
             end
             // pop
@@ -173,4 +173,9 @@ module LoadStoreBuffer #(
     assign lsb_ready = cache_ready;
     assign lsb_rob_id = lsb_ready ? rob_id[head] : 0;
     assign lsb_value = lsb_ready ? cache_res : 0;
+
+    wire dbg_has_dep2_1 = has_dep2[1];
+    wire [31:0] dbg_r1_head = r1[head];
+    wire [31:0] dbg_r2_head = r2[head];
+    wire [11:0] dbg_offset_head = offset[head];
 endmodule

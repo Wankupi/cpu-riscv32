@@ -129,12 +129,12 @@ module ReservationStaion #(
                     busy[insert_pos] <= 1;
                     rob_id[insert_pos] <= inst_rob_id;
                     work_type[insert_pos] <= inst_type;
-                    r1[insert_pos] <= !inst_has_dep1 ? inst_r1 : inst_dep1 == rs_rob_id ? rs_value : inst_dep1 == lsb_rob_id ? lsb_value : 32'b0;
-                    r2[insert_pos] <= !inst_has_dep2 ? inst_r2 : inst_dep2 == rs_rob_id ? rs_value : inst_dep2 == lsb_rob_id ? lsb_value : 32'b0;
+                    r1[insert_pos] <= !inst_has_dep1 ? inst_r1 : rs_ready && inst_dep1 == rs_rob_id ? rs_value : lsb_ready && inst_dep1 == lsb_rob_id ? lsb_value : 32'b0;
+                    r2[insert_pos] <= !inst_has_dep2 ? inst_r2 : rs_ready && inst_dep2 == rs_rob_id ? rs_value : lsb_ready && inst_dep2 == lsb_rob_id ? lsb_value : 32'b0;
                     dep1[insert_pos] <= inst_dep1;
                     dep2[insert_pos] <= inst_dep2;
-                    has_dep1[insert_pos] <= inst_has_dep1 && inst_dep1 != rs_rob_id && inst_dep1 != lsb_rob_id;
-                    has_dep2[insert_pos] <= inst_has_dep2 && inst_dep2 != rs_rob_id && inst_dep2 != lsb_rob_id;
+                    has_dep1[insert_pos] <= inst_has_dep1 && !(rs_ready && inst_dep1 == rs_rob_id) && !(lsb_ready && inst_dep1 == lsb_rob_id);
+                    has_dep2[insert_pos] <= inst_has_dep2 && !(rs_ready && inst_dep2 == rs_rob_id) && !(lsb_ready && inst_dep2 == lsb_rob_id);
                 end
             end
             // update

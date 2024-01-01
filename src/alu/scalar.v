@@ -48,9 +48,9 @@ module scalar_alu (
                     3'b000: value <= r1 == r2;
                     3'b001: value <= r1 != r2;
                     3'b100: value <= $signed(r1) < $signed(r2);
-                    3'b101: value <= $signed(r1) > $signed(r2);
+                    3'b101: value <= $signed(r1) >= $signed(r2);
                     3'b110: value <= $unsigned(r1) < $unsigned(r2);
-                    3'b111: value <= $unsigned(r1) > $unsigned(r2);
+                    3'b111: value <= $unsigned(r1) >= $unsigned(r2);
                     default: begin
                         $display(`ERR("AluScalar"), "Unknown Branch Type: %b", work_type[2:0]);
                         $finish();
