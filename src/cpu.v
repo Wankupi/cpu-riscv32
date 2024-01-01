@@ -258,7 +258,7 @@ module cpu (
 
     ReservationStaion rs (
         .clk_in(clk_in),
-        .rst_in(rst_in),
+        .rst_in(rst_in | rob_clear),
         .rdy_in(rdy_in),
 
         .inst_valid   (dc2rs_valid),
