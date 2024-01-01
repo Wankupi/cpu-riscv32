@@ -22,6 +22,14 @@ build_sim:
 	@cd $(src) && iverilog -o $(testspace)/test $(sim)/testbench.v  ${sources}
 
 build_sim_test: _no_testcase_name_check
+	@$(riscv_bin)/riscv32-unknown-elf-as -o $(sys)/rom.o -march=rv32i $(sys)/rom.s
+	@cp $(sim_testcase)/*$(name)*.c $(testspace)/test.c
+	@$(riscv_bin)/riscv32-unknown-elf-gcc -o $(testspace)/test.o -I $(sys) -c $(testspace)/test.c -g -march=rv32i -static -mabi=ilp32 -O2
+	@$(riscv_bin)/riscv32-unknown-elf-ld -T $(sys)/memory.ld $(sys)/rom.o $(testspace)/test.o -L $(riscv_toolchain)/riscv32-unknown-elf/lib/ -L $(riscv_toolchain)/lib/gcc/riscv32-unknown-elf/13.2.0/ -lc -lgcc -lm -lnosys -o $(testspace)/test.om
+	@$(riscv_bin)/riscv32-unknown-elf-objcopy -O verilog $(testspace)/test.om $(testspace)/test.data
+	@$(riscv_bin)/riscv32-unknown-elf-objdump -d $(testspace)/test.om > $(testspace)/test.dump
+
+build_sim_test_vector: _no_testcase_name_check
 	@$(riscv_bin)/riscv64-unknown-elf-as -o $(sys)/rom.o -march=rv64i $(sys)/rom.s
 	@cp $(sim_testcase)/*$(name)*.c $(testspace)/test.c
 	@$(riscv_bin)/riscv64-unknown-elf-gcc -o $(testspace)/test.o -I $(sys) -c $(testspace)/test.c -g -march=rv64gv -static -mabi=lp64 -O3
