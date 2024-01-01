@@ -62,8 +62,9 @@ module Decoder (
     // TODO:
 
     // to InstFetcher
-    output reg        if_clear,
-    output reg [31:0] if_set_addr
+    output wire        if_stall,
+    output reg         if_clear,
+    output reg  [31:0] if_set_addr
 );
     localparam CodeLui = 7'b0110111, CodeAupic = 7'b0010111, CodeJal = 7'b1101111;
     localparam CodeJalr = 7'b1100111, CodeBr = 7'b1100011, CodeLoad = 7'b0000011;
@@ -199,6 +200,8 @@ module Decoder (
             endcase
         end
     end
+
+    assign if_stall = need_work && !ready_work;
 
     assign get_reg_id1 = rs1;
     assign get_reg_id2 = rs2;

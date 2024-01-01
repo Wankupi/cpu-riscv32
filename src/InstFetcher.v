@@ -10,6 +10,7 @@ module InstFetcher (
     input  wire [31:0] inst_in,
 
     // lines between decoder
+    input  wire        dc_stall,
     input  wire        dc_clear,
     input  wire [31:0] dc_new_pc,
     output reg         inst_ready_out,
@@ -39,7 +40,7 @@ module InstFetcher (
             inst_out <= 0;
             stall <= 0;
         end
-        else if (inst_ready_in && inst_in && !stall) begin
+        else if (inst_ready_in && inst_in && !stall && !dc_stall) begin
             PC <= next_PC;
             inst_ready_out <= 1;
             inst_addr <= PC;

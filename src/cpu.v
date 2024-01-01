@@ -122,6 +122,7 @@ module cpu (
     );
 
     wire          rob_clear;
+    wire          dc2if_stall;
     wire          dc2if_clear;
     wire [  31:0] dc2if_new_pc;
     wire [31 : 0] rob2if_new_pc;
@@ -137,6 +138,7 @@ module cpu (
         .inst_ready_in(icache_ready),
         .inst_in      (if_inst_in),
 
+        .dc_stall      (dc2if_stall),
         .dc_clear      (dc2if_clear),
         .dc_new_pc     (dc2if_new_pc),
         .inst_ready_out(if_ready),
@@ -238,7 +240,8 @@ module cpu (
         .lsb_offset  (dc2lsb_offset),
         .lsb_rob_id  (dc2lsb_rob_id),
 
-        .if_clear(dc2if_clear),
+        .if_stall   (dc2if_stall),
+        .if_clear   (dc2if_clear),
         .if_set_addr(dc2if_new_pc)
     );
 
