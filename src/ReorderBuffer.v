@@ -69,14 +69,7 @@ module ReorderBuffer #(
 
     reg [ROB_SIZE_BIT - 1:0] head, tail;
 
-    reg [31:0] dbg_size, dbg_stall;
-    wire [31:0] dbg_pc_head = inst_addr[head];
-    reg [31:0] dbg_commited;
-    wire dbg_ready_head = ready[head];
-    wire dbg_ready18 = ready[18];
-
     always @(posedge clk_in) begin
-        if (rst_in) dbg_commited <= 1;
         if (rst_in || clear) begin
             clear  <= 0;
             new_pc <= 0;
@@ -91,8 +84,6 @@ module ReorderBuffer #(
             end
             head <= 0;
             tail <= 0;
-            dbg_size <= 0;
-            dbg_stall <= 0;
         end
         else if (!rdy_in) begin
             // do nothing
@@ -122,50 +113,26 @@ module ReorderBuffer #(
                 jump_addr[tail] <= inst_jump_addr;
             end
             if (busy[head] && ready[head]) begin
-                dbg_commited <= dbg_commited + 1;
-
-`ifdef DEBUG
-                $write("[%5d] ", dbg_commited);
-`endif
                 head <= head + 1;
                 busy[head] <= 0;
                 ready[head] <= 0;
                 case (work_type[head])
                     TypeRg: begin
                         // things are done by wire
-`ifdef DEBUG
-                        $display("%h", inst_addr[head], " reg[%d] = %8h", rd[head], value[head]);
-`endif
                     end
                     TypeSt: begin
                         // do nothing
-`ifdef DEBUG
-                        $display("%h", inst_addr[head], " st");
-`endif
                     end
                     TypeBr: begin
                         if (value[head][0] ^ jump_addr[head][0]) begin
                             new_pc <= {jump_addr[head][31:1], 1'b0};
                             clear  <= 1;
                         end
-`ifdef DEBUG
-                        $display("%h", inst_addr[head], " br %8h", value[head] ? jump_addr[head] : inst_addr[head] + 4);
-                        // if (inst_addr[head] == 32'h0000104c) $display($time);
-`endif
                     end
                     TypeEx: begin
                         $finish();
                     end
                 endcase
-            end
-
-            if (inst_valid && !(busy[head] && ready[head])) dbg_size <= dbg_size + 1;
-            else if (!inst_valid && (busy[head] && ready[head])) dbg_size <= dbg_size - 1;
-            if (ready[head]) dbg_stall <= 0;
-            else dbg_stall <= dbg_stall + 1;
-            if (dbg_stall > 50) begin
-                $display(`ERR("RoB"), "stall too long");
-                $finish();
             end
         end
     end
@@ -189,6 +156,4 @@ module ReorderBuffer #(
     assign rob_value1 = ready[get_rob_id1] ? value[get_rob_id1] : (rs_ready && rs_rob_id == get_rob_id1) ? rs_value : (lsb_ready && lsb_rob_id == get_rob_id1) ? lsb_value : 32'b0;
     assign rob_value2_ready = ready[get_rob_id2] || (rs_ready && rs_rob_id == get_rob_id2) || (lsb_ready && lsb_rob_id == get_rob_id2);
     assign rob_value2 = ready[get_rob_id2] ? value[get_rob_id2] : (rs_ready && rs_rob_id == get_rob_id2) ? rs_value : (lsb_ready && lsb_rob_id == get_rob_id2) ? lsb_value : 32'b0;
-
-    wire [`ROB_TYPE_BIT -  1:0] dbg_head_work_type = work_type[head];
 endmodule

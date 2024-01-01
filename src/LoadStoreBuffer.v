@@ -80,13 +80,6 @@ module LoadStoreBuffer #(
 
     assign cache_valid = work;
 
-    reg [31:0] dbg_size;
-
-    wire dbg_busyk = busy[k];
-    wire dbg_has_dep1k = has_dep1[k];
-    wire dbg_has_dep2k = has_dep2[k];
-    wire dbg_robidk = rob_id[k];
-
     always @(posedge clk_in) begin
         if (rst_in) begin
             head <= 0;
@@ -104,7 +97,6 @@ module LoadStoreBuffer #(
                 dep2[i] <= 0;
                 offset[i] <= 0;
             end
-            dbg_size <= 0;
         end
         else if (!rdy_in) begin
             // do nothing
@@ -136,9 +128,6 @@ module LoadStoreBuffer #(
                 head <= head + 1;
                 busy[head] <= 0;
             end
-
-            if (inst_valid && !pop_able) dbg_size <= dbg_size + 1;
-            else if (!inst_valid && pop_able) dbg_size <= dbg_size - 1;
 
             for (integer i = 0; i < LSB_SIZE; i = i + 1) begin : UPDATE
                 if (busy[i]) begin
@@ -173,9 +162,4 @@ module LoadStoreBuffer #(
     assign lsb_ready = cache_ready;
     assign lsb_rob_id = lsb_ready ? rob_id[head] : 0;
     assign lsb_value = lsb_ready ? cache_res : 0;
-
-    wire dbg_has_dep2_1 = has_dep2[1];
-    wire [31:0] dbg_r1_head = r1[head];
-    wire [31:0] dbg_r2_head = r2[head];
-    wire [11:0] dbg_offset_head = offset[head];
 endmodule

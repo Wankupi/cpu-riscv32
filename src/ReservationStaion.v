@@ -27,8 +27,6 @@ module ReservationStaion #(
     output wire [`ROB_WIDTH_BIT - 1 : 0] rs_rob_id,
     output wire [                31 : 0] rs_value
 );
-    reg [31:0] dbg_size;
-
     localparam RS_SIZE = 1 << RS_SIZE_BIT;
 
     reg                           busy      [0 : RS_SIZE - 1];
@@ -112,7 +110,6 @@ module ReservationStaion #(
                 dep1[i] <= 0;
                 dep2[i] <= 0;
             end
-            dbg_size <= 0;
         end
         else if (!rdy_in) begin
             // do nothing
@@ -162,27 +159,8 @@ module ReservationStaion #(
             if (executable[shot_pos]) begin
                 busy[shot_pos] <= 0;
             end
-
-            if (inst_valid && !executable[shot_pos]) dbg_size <= dbg_size + 1;
-            else if (!inst_valid && executable[shot_pos]) dbg_size <= dbg_size - 1;
         end
     end
 
     assign full = busy[insert_pos];
-
-    // wire dbg_has_dep1 = has_dep1[shot_pos];
-    // wire dbg_has_dep2 = has_dep2[shot_pos];
-    // wire [`ROB_WIDTH_BIT - 1 : 0] dbg_dep1 = dep1[shot_pos];
-    // wire [`ROB_WIDTH_BIT - 1 : 0] dbg_dep2 = dep2[shot_pos];
-    // wire [31 : 0] dbg_r1 = r1[shot_pos];
-    // wire [31 : 0] dbg_r2 = r2[shot_pos];
-    // wire [`ROB_WIDTH_BIT - 1 : 0] dbg_rob_id = rob_id[shot_pos];
-    // wire [RS_SIZE_BIT - 1 : 0] dbg_work_type = work_type[shot_pos];
-    // wire dbg_busy = busy[shot_pos];
-    // wire dbg_executable = executable[shot_pos];
-
-    generate
-        genvar bi;
-        for (bi = 0; bi < RS_SIZE; bi = bi + 1) wire busyi = busy[bi];
-    endgenerate
 endmodule

@@ -35,8 +35,6 @@ module RegisterFile (
     reg [`ROB_WIDTH_BIT - 1:0] dep[0:31];
     reg has_dep[0:31];
 
-    wire dbg_has_dep1 = has_dep[get_id1];
-    wire dbg_has_dep_id9 = has_dep[9];
     assign get_val1 = has_dep[get_id1] ? rob_value1 : regs[get_id1];
     assign get_val2 = has_dep[get_id2] ? rob_value2 : regs[get_id2];
     assign get_has_dep1 = (set_dep_reg_id && set_dep_reg_id == get_id1) || has_dep[get_id1] && !rob_value1_ready;
