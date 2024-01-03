@@ -98,11 +98,6 @@ module ReorderBuffer #(
                 value[lsb_rob_id] <= lsb_value;
             end
             if (inst_valid) begin
-                if (head == tail && busy[head] && !ready[head]) begin
-                    $display(`ERR("RoB"), "full but still adding");
-                    $finish();
-                end
-                // $display(`LOG("RoB"), ": add inst %x", inst_pc);
                 tail <= tail + 1;
                 busy[tail] <= 1;
                 ready[tail] <= inst_ready;

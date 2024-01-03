@@ -44,17 +44,4 @@ module InstuctionCache #(
         end
     end
 
-
-`ifdef DEBUG
-    generate
-        genvar idx;
-        for (idx = 0; idx < SIZE; idx = idx + 1) begin : bv
-            wire [31:0] bufv;
-            assign bufv = buff[idx];
-            wire ex;
-            assign ex = exist[idx];
-        end
-    endgenerate
-`endif
-
 endmodule

@@ -193,10 +193,6 @@ module Decoder (
                 CodeAupic: begin
                     rob_value <= inst_addr + {immU, 12'b0};
                 end
-                default: begin
-                    $display(`ERR("Decoder"), "unknown opcode %b of addr=%x", opcode, inst_addr);
-                    $finish();
-                end
             endcase
         end
     end

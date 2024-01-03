@@ -71,12 +71,10 @@ module ReservationStaion #(
         for (i = RS_SIZE; i < 2 * RS_SIZE; i = i + 1) begin
             assign tmp_exe[i]  = executable[i-RS_SIZE] ? i : {RS_SIZE_BIT{1'b0}};
             assign tmp_free[i] = busy[i-RS_SIZE] ? {RS_SIZE_BIT{1'b0}} : i - RS_SIZE;
-            wire [RS_SIZE_BIT - 1 : 0] tf = tmp_free[i];
         end
         for (i = 1; i < RS_SIZE; i = i + 1) begin
             assign tmp_exe[i]  = executable[tmp_exe[i*2]] ? tmp_exe[i*2] : tmp_exe[i*2+1];
             assign tmp_free[i] = busy[tmp_free[i*2]] ? tmp_free[i*2+1] : tmp_free[i*2];
-            wire [RS_SIZE_BIT - 1 : 0] tf = tmp_free[i];
         end
         assign shot_pos   = tmp_exe[1];
         assign insert_pos = tmp_free[1];
@@ -117,22 +115,15 @@ module ReservationStaion #(
         else begin
             // insert
             if (inst_valid) begin
-                if (full) begin
-                    $display(`ERR("RS"), "full but still insert!");
-                    $finish();
-                end
-                else begin
-                    // $display(`LOG("RS"), "insert %b", inst_type);
-                    busy[insert_pos] <= 1;
-                    rob_id[insert_pos] <= inst_rob_id;
-                    work_type[insert_pos] <= inst_type;
-                    r1[insert_pos] <= !inst_has_dep1 ? inst_r1 : rs_ready && inst_dep1 == rs_rob_id ? rs_value : lsb_ready && inst_dep1 == lsb_rob_id ? lsb_value : 32'b0;
-                    r2[insert_pos] <= !inst_has_dep2 ? inst_r2 : rs_ready && inst_dep2 == rs_rob_id ? rs_value : lsb_ready && inst_dep2 == lsb_rob_id ? lsb_value : 32'b0;
-                    dep1[insert_pos] <= inst_dep1;
-                    dep2[insert_pos] <= inst_dep2;
-                    has_dep1[insert_pos] <= inst_has_dep1 && !(rs_ready && inst_dep1 == rs_rob_id) && !(lsb_ready && inst_dep1 == lsb_rob_id);
-                    has_dep2[insert_pos] <= inst_has_dep2 && !(rs_ready && inst_dep2 == rs_rob_id) && !(lsb_ready && inst_dep2 == lsb_rob_id);
-                end
+                busy[insert_pos] <= 1;
+                rob_id[insert_pos] <= inst_rob_id;
+                work_type[insert_pos] <= inst_type;
+                r1[insert_pos] <= !inst_has_dep1 ? inst_r1 : rs_ready && inst_dep1 == rs_rob_id ? rs_value : lsb_ready && inst_dep1 == lsb_rob_id ? lsb_value : 32'b0;
+                r2[insert_pos] <= !inst_has_dep2 ? inst_r2 : rs_ready && inst_dep2 == rs_rob_id ? rs_value : lsb_ready && inst_dep2 == lsb_rob_id ? lsb_value : 32'b0;
+                dep1[insert_pos] <= inst_dep1;
+                dep2[insert_pos] <= inst_dep2;
+                has_dep1[insert_pos] <= inst_has_dep1 && !(rs_ready && inst_dep1 == rs_rob_id) && !(lsb_ready && inst_dep1 == lsb_rob_id);
+                has_dep2[insert_pos] <= inst_has_dep2 && !(rs_ready && inst_dep2 == rs_rob_id) && !(lsb_ready && inst_dep2 == lsb_rob_id);
             end
             // update
             for (integer i = 0; i < RS_SIZE; i = i + 1) begin

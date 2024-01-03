@@ -40,9 +40,6 @@ module scalar_alu (
             ready  <= 1'b1;
             rob_id <= inst_rob_id;
 
-            if (work_type[5]) begin  // RV32M extension
-                $display(`ERR("AluScalar"), "RV32M extension is not supported yet");
-            end
             if (work_type[4]) begin
                 case (work_type[2:0])
                     3'b000: value <= r1 == r2;
@@ -51,10 +48,6 @@ module scalar_alu (
                     3'b101: value <= $signed(r1) >= $signed(r2);
                     3'b110: value <= $unsigned(r1) < $unsigned(r2);
                     3'b111: value <= $unsigned(r1) >= $unsigned(r2);
-                    default: begin
-                        $display(`ERR("AluScalar"), "Unknown Branch Type: %b", work_type[2:0]);
-                        $finish();
-                    end
                 endcase
             end
             else begin
@@ -67,10 +60,6 @@ module scalar_alu (
                     SrlSra: value <= work_type[3] ? $signed(r1) >>> r2[4:0] : r1 >> r2[4:0];
                     Or: value <= r1 | r2;
                     And: value <= r1 & r2;
-                    default: begin
-                        $display(`ERR("AluScalar"), "Unknown Type: %b", work_type[2:0]);
-                        $finish();
-                    end
                 endcase
             end
         end
