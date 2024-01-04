@@ -44,9 +44,10 @@ module RegisterFile (
     assign get_rob_id1 = get_dep1;
     assign get_rob_id2 = get_dep2;
 
-    always @(posedge clk_in) begin
+    always @(posedge clk_in) begin : MainBlock
+        integer i;
         if (rst_in) begin
-            for (integer i = 0; i < 32; ++i) begin
+            for (i = 0; i < 32; i = i + 1) begin
                 regs[i] <= 0;
                 dep[i] <= 0;
                 has_dep[i] <= 0;
@@ -56,7 +57,7 @@ module RegisterFile (
             // do nothing
         end
         else if (rob_clear) begin
-            for (integer i = 0; i < 32; ++i) begin
+            for (i = 0; i < 32; i = i + 1) begin
                 dep[i] <= 0;
                 has_dep[i] <= 0;
             end

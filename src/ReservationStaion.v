@@ -95,9 +95,10 @@ module ReservationStaion #(
         .value(rs_value)
     );
 
-    always @(posedge clk_in) begin
+    always @(posedge clk_in) begin : MainBlock
+        integer i;
         if (rst_in) begin
-            for (integer i = 0; i < RS_SIZE; i = i + 1) begin
+            for (i = 0; i < RS_SIZE; i = i + 1) begin
                 busy[i] <= 0;
                 rob_id[i] <= 0;
                 work_type[i] <= 0;
@@ -126,7 +127,7 @@ module ReservationStaion #(
                 has_dep2[insert_pos] <= inst_has_dep2 && !(rs_ready && inst_dep2 == rs_rob_id) && !(lsb_ready && inst_dep2 == lsb_rob_id);
             end
             // update
-            for (integer i = 0; i < RS_SIZE; i = i + 1) begin
+            for (i = 0; i < RS_SIZE; i = i + 1) begin
                 if (busy[i]) begin
                     if (rs_ready && has_dep1[i] && (rs_rob_id == dep1[i])) begin
                         r1[i] <= rs_value;

@@ -80,12 +80,13 @@ module LoadStoreBuffer #(
 
     assign cache_valid = work;
 
+    integer i;
     always @(posedge clk_in) begin
         if (rst_in) begin
             head <= 0;
             tail <= 0;
             work <= 0;
-            for (integer i = 0; i < LSB_SIZE; i = i + 1) begin : RESET
+            for (i = 0; i < LSB_SIZE; i = i + 1) begin : RESET
                 busy[i] <= 0;
                 rob_id[i] <= 0;
                 work_type[i] <= 0;
@@ -129,7 +130,7 @@ module LoadStoreBuffer #(
                 busy[head] <= 0;
             end
 
-            for (integer i = 0; i < LSB_SIZE; i = i + 1) begin : UPDATE
+            for (i = 0; i < LSB_SIZE; i = i + 1) begin : UPDATE
                 if (busy[i]) begin
                     if (rs_ready && has_dep1[i] && (rs_rob_id == dep1[i])) begin
                         r1[i] <= rs_value;

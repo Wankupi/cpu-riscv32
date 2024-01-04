@@ -69,11 +69,12 @@ module ReorderBuffer #(
 
     reg [ROB_SIZE_BIT - 1:0] head, tail;
 
+    integer i;
     always @(posedge clk_in) begin
         if (rst_in || clear) begin
             clear  <= 0;
             new_pc <= 0;
-            for (integer i = 0; i < ROB_SIZE; i = i + 1) begin
+            for (i = 0; i < ROB_SIZE; i = i + 1) begin
                 busy[i] <= 0;
                 ready[i] <= 0;
                 work_type[i] <= 0;
