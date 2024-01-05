@@ -12,10 +12,11 @@ module MemoryController (
     input wire rst_in,  // reset signal
     input wire rdy_in,  // ready signal, pause cpu when low
 
-    input  wire [ 7:0] mem_din,   // data input bus
-    output wire [ 7:0] mem_dout,  // data output bus
-    output wire [31:0] mem_a,     // address bus (only 17:0 is used)
-    output wire        mem_wr,    // write/read signal (1 for write)
+    input  wire [ 7:0] mem_din,        // data input bus
+    output wire [ 7:0] mem_dout,       // data output bus
+    output wire [31:0] mem_a,          // address bus (only 17:0 is used)
+    output wire        mem_wr,         // write/read signal (1 for write)
+    input  wire        io_buffer_full,
 
     input  wire        valid,  // need to do something
     input  wire        wr,     // write/read signal (1 for write)
@@ -40,18 +41,20 @@ module MemoryController (
             default: get_result = 0;
         endcase
     endfunction
-    reg        worked;
-    reg [31:0] work_addr;
-    reg        work_wr;
-    reg [ 2:0] work_len;
-    reg [ 2:0] work_cycle;
-    reg [31:0] current_addr;
-    reg [ 7:0] current_data;
-    reg        current_wr;
-    reg [31:0] result;
+    reg         worked;
+    reg  [31:0] work_addr;
+    reg         work_wr;
+    reg  [ 2:0] work_len;
+    reg  [ 2:0] work_cycle;
+    reg  [31:0] current_addr;
+    reg  [ 7:0] current_data;
+    reg         current_wr;
+    reg  [31:0] result;
 
+    wire        is_io_mapping = addr[17:16] == 2'b11;
+    wire        able_to_write = !(is_io_mapping && wr && io_buffer_full);
     assign ready = worked && work_cycle == 0 && work_addr == addr && work_wr == wr && work_len == len;
-    wire need_work = valid && !ready;
+    wire need_work = valid && !ready && able_to_write;
 
     // `direct` choose direct or inner value
     // 0: direct, 1: inner
@@ -113,13 +116,13 @@ module MemoryController (
                     end
                     else begin
                         work_cycle   <= 3'b010;
-                        current_addr <= addr + 2;
+                        current_addr <= work_addr + 2;
                         current_data <= data[23:16];
                     end
                 end
                 3'b010: begin
                     result[15:8] <= mem_din;
-                    current_addr <= addr + 3;
+                    current_addr <= work_addr + 3;
                     current_data <= data[31:24];
                     work_cycle   <= 3'b011;
                 end

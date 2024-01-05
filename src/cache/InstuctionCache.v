@@ -1,5 +1,6 @@
+`include "const.v"
 module InstuctionCache #(
-    parameter Bit = 2
+    parameter Bit = `ICACHE_SIZE_BIT
 ) (
     input wire clk_in,
     input wire rst_in,

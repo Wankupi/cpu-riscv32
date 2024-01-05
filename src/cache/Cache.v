@@ -4,10 +4,11 @@ module Cache (
     input wire rst_in,  // reset signal
     input wire rdy_in,  // ready signal, pause cpu when low
 
-    input  wire [ 7:0] mem_din,   // data input bus
-    output wire [ 7:0] mem_dout,  // data output bus
-    output wire [31:0] mem_a,     // address bus (only 17:0 is used)
-    output wire        mem_wr,    // write/read signal (1 for write)
+    input  wire [ 7:0] mem_din,        // data input bus
+    output wire [ 7:0] mem_dout,       // data output bus
+    output wire [31:0] mem_a,          // address bus (only 17:0 is used)
+    output wire        mem_wr,         // write/read signal (1 for write)
+    input  wire        io_buffer_full,
 
     input wire rob_clear,
 
@@ -58,6 +59,7 @@ module Cache (
         .mem_dout(mem_dout),
         .mem_a(mem_a),
         .mem_wr(mem_wr),
+        .io_buffer_full(io_buffer_full),
 
         .valid(mc_enable),
         .wr(mc_wr),

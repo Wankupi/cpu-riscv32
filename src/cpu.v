@@ -105,6 +105,7 @@ module cpu (
         .mem_dout(mem_dout),
         .mem_a   (mem_a),
         .mem_wr  (mem_wr),
+        .io_buffer_full(io_buffer_full),
 
         .rob_clear(rob_clear),
 

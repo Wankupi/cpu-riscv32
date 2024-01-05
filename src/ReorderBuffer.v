@@ -74,7 +74,7 @@ module ReorderBuffer #(
     integer i;
     always @(posedge clk_in) begin
         if (rst_in) begin
-            count_finished <= 0;
+            count_finished <= 1;
         end
         if (rst_in || clear) begin
             clear  <= 0;
