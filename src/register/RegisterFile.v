@@ -34,11 +34,12 @@ module RegisterFile (
     reg [31:0] regs[0:31];
     reg [`ROB_WIDTH_BIT - 1:0] dep[0:31];
     reg has_dep[0:31];
-
-    assign get_val1 = has_dep[get_id1] ? rob_value1 : regs[get_id1];
-    assign get_val2 = has_dep[get_id2] ? rob_value2 : regs[get_id2];
-    assign get_has_dep1 = (set_dep_reg_id && set_dep_reg_id == get_id1) || has_dep[get_id1] && !rob_value1_ready;
-    assign get_has_dep2 = (set_dep_reg_id && set_dep_reg_id == get_id2) || has_dep[get_id2] && !rob_value2_ready;
+    assign hd1 = has_dep[get_id1] || set_dep_reg_id && set_dep_reg_id == get_id1;
+    assign hd2 = has_dep[get_id2] || set_dep_reg_id && set_dep_reg_id == get_id2;
+    assign get_val1 = hd1 ? rob_value1 : regs[get_id1];
+    assign get_val2 = hd2 ? rob_value2 : regs[get_id2];
+    assign get_has_dep1 = hd1 && !rob_value1_ready;
+    assign get_has_dep2 = hd2 && !rob_value2_ready;
     assign get_dep1 = set_dep_reg_id == get_id1 ? set_dep_rob_id : dep[get_id1];
     assign get_dep2 = set_dep_reg_id == get_id2 ? set_dep_rob_id : dep[get_id2];
     assign get_rob_id1 = get_dep1;

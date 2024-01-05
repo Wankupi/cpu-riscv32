@@ -112,6 +112,10 @@ module ReorderBuffer #(
                 value[tail] <= inst_value;
                 inst_addr[tail] <= inst_pc;
                 jump_addr[tail] <= inst_jump_addr;
+                if (head == tail && busy[head] && !ready[head]) begin
+                    $display("rob full, still adding");
+                    $finish();
+                end
             end
             if (busy[head] && ready[head]) begin
                 count_finished <= count_finished + 1;
@@ -151,8 +155,8 @@ module ReorderBuffer #(
     assign set_dep_reg_id = need_set_dep ? inst_rd : 0;
     assign set_dep_rob_id = need_set_dep ? tail : 0;
 
-    assign rob_value1_ready = ready[get_rob_id1] || (rs_ready && rs_rob_id == get_rob_id1) || (lsb_ready && lsb_rob_id == get_rob_id1);
-    assign rob_value1 = ready[get_rob_id1] ? value[get_rob_id1] : (rs_ready && rs_rob_id == get_rob_id1) ? rs_value : (lsb_ready && lsb_rob_id == get_rob_id1) ? lsb_value : 32'b0;
-    assign rob_value2_ready = ready[get_rob_id2] || (rs_ready && rs_rob_id == get_rob_id2) || (lsb_ready && lsb_rob_id == get_rob_id2);
-    assign rob_value2 = ready[get_rob_id2] ? value[get_rob_id2] : (rs_ready && rs_rob_id == get_rob_id2) ? rs_value : (lsb_ready && lsb_rob_id == get_rob_id2) ? lsb_value : 32'b0;
+    assign rob_value1_ready = ready[get_rob_id1] || (rs_ready && rs_rob_id == get_rob_id1) || (lsb_ready && lsb_rob_id == get_rob_id1) || (inst_valid && inst_ready && tail == get_rob_id1);
+    assign rob_value1 = ready[get_rob_id1] ? value[get_rob_id1] : (rs_ready && rs_rob_id == get_rob_id1) ? rs_value : (lsb_ready && lsb_rob_id == get_rob_id1) ? lsb_value : inst_value;
+    assign rob_value2_ready = ready[get_rob_id2] || (rs_ready && rs_rob_id == get_rob_id2) || (lsb_ready && lsb_rob_id == get_rob_id2) || (inst_valid && inst_ready && tail == get_rob_id2);
+    assign rob_value2 = ready[get_rob_id2] ? value[get_rob_id2] : (rs_ready && rs_rob_id == get_rob_id2) ? rs_value : (lsb_ready && lsb_rob_id == get_rob_id2) ? lsb_value : inst_value;
 endmodule
