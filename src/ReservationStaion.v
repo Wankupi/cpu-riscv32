@@ -58,26 +58,34 @@ module ReservationStaion #(
                 (lsb_ready && lsb_rob_id == dep2[i]) ? lsb_value :  //
                 (rs_ready && rs_rob_id == dep2[i]) ? rs_value : 32'b0;
             assign executable[i] = busy[i] && free1[i] && free2[i];
-            wire exe = executable[i];
         end
     endgenerate
 
+    wire shotable;
     wire [RS_SIZE_BIT - 1 : 0] shot_pos;
     wire [RS_SIZE_BIT - 1 : 0] insert_pos;
 
     generate
-        wire [RS_SIZE_BIT - 1:0] tmp_exe [1 : 2 * RS_SIZE - 1];
-        wire [RS_SIZE_BIT - 1:0] tmp_free[1 : 2 * RS_SIZE - 1];
+        wire tmp_exe[1 : 2 * RS_SIZE - 1];
+        wire [RS_SIZE_BIT - 1:0] exe_pos[1 : 2 * RS_SIZE - 1];
+        wire tmp_free[1 : 2 * RS_SIZE - 1];
+        wire [RS_SIZE_BIT - 1:0] free_pos[1 : 2 * RS_SIZE - 1];
         for (i = RS_SIZE; i < 2 * RS_SIZE; i = i + 1) begin
-            assign tmp_exe[i]  = executable[i-RS_SIZE] ? i : {RS_SIZE_BIT{1'b0}};
-            assign tmp_free[i] = busy[i-RS_SIZE] ? {RS_SIZE_BIT{1'b0}} : i - RS_SIZE;
+            assign tmp_exe[i]  = executable[i-RS_SIZE];
+            assign exe_pos[i]  = i - RS_SIZE;
+            assign tmp_free[i] = ~busy[i-RS_SIZE];
+            assign free_pos[i] = i - RS_SIZE;
         end
         for (i = 1; i < RS_SIZE; i = i + 1) begin
-            assign tmp_exe[i]  = executable[tmp_exe[i*2]] ? tmp_exe[i*2] : tmp_exe[i*2+1];
-            assign tmp_free[i] = busy[tmp_free[i*2]] ? tmp_free[i*2+1] : tmp_free[i*2];
+            assign tmp_exe[i]  = tmp_exe[i<<1] | tmp_exe[i<<1|1];
+            assign exe_pos[i]  = tmp_exe[i<<1] ? exe_pos[i<<1] : exe_pos[i<<1|1];
+            assign tmp_free[i] = tmp_free[i<<1] | tmp_free[i<<1|1];
+            assign free_pos[i] = tmp_free[i<<1] ? free_pos[i<<1] : free_pos[i<<1|1];
         end
-        assign shot_pos   = tmp_exe[1];
-        assign insert_pos = tmp_free[1];
+        assign shotable = tmp_exe[1];
+        assign shot_pos = exe_pos[1];
+        assign insert_pos = free_pos[1];
+        assign full = ~tmp_free[1];
     endgenerate
 
     scalar_alu alu (
@@ -148,11 +156,9 @@ module ReservationStaion #(
                 end
             end
             // pop
-            if (executable[shot_pos]) begin
+            if (shotable) begin
                 busy[shot_pos] <= 0;
             end
         end
     end
-
-    assign full = busy[insert_pos];
 endmodule
