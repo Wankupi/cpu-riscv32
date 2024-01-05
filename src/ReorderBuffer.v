@@ -49,7 +49,9 @@ module ReorderBuffer #(
     output wire [                  31:0] rob_value2,
 
     output reg clear,
-    output reg [31:0] new_pc
+    output reg [31:0] new_pc,
+
+    output reg [15:0] count_finished
 );
 
     localparam ROB_SIZE = 1 << ROB_SIZE_BIT;
@@ -71,6 +73,9 @@ module ReorderBuffer #(
 
     integer i;
     always @(posedge clk_in) begin
+        if (rst_in) begin
+            count_finished <= 0;
+        end
         if (rst_in || clear) begin
             clear  <= 0;
             new_pc <= 0;
@@ -109,6 +114,7 @@ module ReorderBuffer #(
                 jump_addr[tail] <= inst_jump_addr;
             end
             if (busy[head] && ready[head]) begin
+                count_finished <= count_finished + 1;
                 head <= head + 1;
                 busy[head] <= 0;
                 ready[head] <= 0;
@@ -124,9 +130,6 @@ module ReorderBuffer #(
                             new_pc <= {jump_addr[head][31:1], 1'b0};
                             clear  <= 1;
                         end
-                    end
-                    TypeEx: begin
-                        $finish();
                     end
                 endcase
             end

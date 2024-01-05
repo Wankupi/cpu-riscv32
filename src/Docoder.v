@@ -84,6 +84,7 @@ module Decoder (
     wire [ 11:0] immS = {inst[31:25], inst[11:7]};
     wire [  4:0] shamt = inst[24:20];
 
+    reg [31:0] last_inst_addr;
     wire need_work, ready_work;
     wire need_RS, need_LSB, need_rob, need_reg_s1;
 
@@ -99,7 +100,6 @@ module Decoder (
 
     wire [31:0] next_rs2_val = opcode == CodeArithI ? ((func == 3'b001 || func == 3'b101) ? shamt : {{20{immI[11]}}, immI}) : rs2_val_in;
 
-    reg [31:0] last_inst_addr;
     reg [31:0] rs1_val, rs2_val;
     reg is_dep1, is_dep2;
     reg [`ROB_WIDTH_BIT - 1 : 0] dep1_val, dep2_val;

@@ -49,6 +49,7 @@ module cpu (
     wire [`ROB_WIDTH_BIT - 1 : 0] get_rob_id2;
     wire                          rob_value2_ready;
     wire [                  31:0] rob_value2;
+    wire                          rob_clear;
 
     RegisterFile register_file (
         .clk_in(clk_in),
@@ -121,7 +122,6 @@ module cpu (
         .data_res  (cache2lsb_res)
     );
 
-    wire          rob_clear;
     wire          dc2if_stall;
     wire          dc2if_clear;
     wire [  31:0] dc2if_new_pc;
@@ -361,6 +361,8 @@ module cpu (
         .set_dep_rob_id   (set_dep_rob_id),
 
         .clear (rob_clear),
-        .new_pc(rob2if_new_pc)
+        .new_pc(rob2if_new_pc),
+
+        .count_finished(dbgreg_dout[15:0])
     );
 endmodule
