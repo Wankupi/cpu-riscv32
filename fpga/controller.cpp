@@ -4,7 +4,7 @@
 #include <vector>
 #include <ctime>
 #include <cstring>
-
+#include <cstdint>
 int run_mode;
 
 #define error(msg...) printf(msg)
