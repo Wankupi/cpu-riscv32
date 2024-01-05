@@ -16,8 +16,9 @@ sources = $(shell find "$(src)" -name '*.v')
 
 testcases=$(shell find $(testcase) -name "*.c")
 datafiles=$(testcases:.c=.data)
+dumpfiles=$(testcases:.c=.dump)
 
-all: $(datafiles)
+all: $(datafiles) $(dumpfiles)
 
 _no_testcase_name_check:
 	@$(if $(strip $(name)),, echo 'Missing Testcase Name')
@@ -25,15 +26,12 @@ _no_testcase_name_check:
 
 # All build result are put at testspace
 build_sim:
-	@cd $(src) && iverilog -o $(testspace)/test $(sim)/testbench.v  ${sources}
+	@cd $(src) && iverilog -DSIM -o $(testspace)/test $(sim)/testbench.v  ${sources}
 
-build_sim_test: _no_testcase_name_check
-	@$(riscv_bin)/riscv32-unknown-elf-as -o $(sys)/rom.o -march=rv32i $(sys)/rom.s
+build_sim_test: _no_testcase_name_check all
 	@cp $(sim_testcase)/*$(name)*.c $(testspace)/test.c
-	@$(riscv_bin)/riscv32-unknown-elf-gcc -o $(testspace)/test.o -I $(sys) -c $(testspace)/test.c -g -march=rv32i -static -mabi=ilp32 -O2
-	@$(riscv_bin)/riscv32-unknown-elf-ld -T $(sys)/memory.ld $(sys)/rom.o $(testspace)/test.o -L $(riscv_toolchain)/riscv32-unknown-elf/lib/ -L $(riscv_toolchain)/lib/gcc/riscv32-unknown-elf/13.2.0/ -lc -lgcc -lm -lnosys -o $(testspace)/test.om
-	@$(riscv_bin)/riscv32-unknown-elf-objcopy -O verilog $(testspace)/test.om $(testspace)/test.data
-	@$(riscv_bin)/riscv32-unknown-elf-objdump -d $(testspace)/test.om > $(testspace)/test.dump
+	@cp $(sim_testcase)/*$(name)*.data $(testspace)/test.data
+	@cp $(sim_testcase)/*$(name)*.dump $(testspace)/test.dump
 
 
 build_sim_test_vector: _no_testcase_name_check
@@ -82,8 +80,8 @@ run_sim:
 	@cd $(testspace) && ./test
 
 clean:
-	@rm -f $(sys)/rom.o $(testspace)/test* $(datafiles)
+	@rm -f $(sys)/rom.o $(testspace)/test* $(datafiles) $(dumpfiles)
 
 test_sim: build_sim build_sim_test run_sim
 
-.PHONY: _no_testcase_name_check build_sim build_sim_test run_sim clear test_sim
+.PHONY: _no_testcase_name_check build_sim build_sim_test run_sim clear test_sim all
