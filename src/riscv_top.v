@@ -104,14 +104,15 @@ module riscv_top #(
     cpu cpu0 (
         .clk_in(clk),
         .rst_in(rst | program_finish),
-        .rdy_in(cpu_rdy),
+        .rdy_in(cpu_rdy & ~hci_io_full),
 
         .mem_din(cpu_ram_din),
         .mem_dout(cpu_ram_dout),
         .mem_a(cpu_ram_a),
         .mem_wr(cpu_ram_wr),
 
-        .io_buffer_full(hci_io_full & ~1'b`SIM),
+        // .io_buffer_full(hci_io_full & ~1'b`SIM),
+        .io_buffer_full(1'b0),
 
         .dbgreg_dout(cpu_dbgreg_dout)
     );
@@ -172,7 +173,11 @@ module riscv_top #(
     assign led[0]      = hci_active;
     assign led[1]      = cpu_rdy;
     assign led[2]      = rst | program_finish;
-    assign led[15:3]   = 0;
+    assign led[3]      = hci_io_full;
+    assign led[4]      = cpu_dbgreg_dout[16];  // rob full
+    assign led[5]      = cpu_dbgreg_dout[17];  // rs full
+    assign led[6]      = cpu_dbgreg_dout[18];  // lsb full
+    assign led[15:7]   = 0;
 
     DigitalTube digitalTube (
         .clk(clk),

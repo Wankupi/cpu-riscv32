@@ -366,4 +366,8 @@ module cpu (
 
         .count_finished(dbgreg_dout[15:0])
     );
+
+    assign dbgreg_dout[16] = rob_full;
+    assign dbgreg_dout[17] = rs_full;
+    assign dbgreg_dout[18] = lsb_full;
 endmodule

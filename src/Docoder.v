@@ -146,7 +146,7 @@ module Decoder (
             rs_valid <= need_RS;
             lsb_valid <= need_LSB;
 
-            rs_type <= {(opcode == CodeArithR && inst[25]), (opcode == CodeBr), (opcode == CodeArithR && inst[30]), func};
+            rs_type <= {(opcode == CodeBr), (opcode == CodeArithR && inst[30]), func};
             lsb_type <= {(opcode == CodeLoad ? 1'b0 : 1'b1), func};
             rob_type <= inst == 32'hff9ff06f ? `ROB_TYPE_EX : opcode == CodeStore ? `ROB_TYPE_ST : opcode == CodeBr ? `ROB_TYPE_BR : `ROB_TYPE_RG;
 

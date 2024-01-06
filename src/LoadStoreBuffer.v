@@ -66,9 +66,8 @@ module LoadStoreBuffer #(
     reg [                11:0] offset   [0 : LSB_SIZE - 1];
 
 
-    wire full_real, pop_able;
+    wire pop_able;
 
-    assign full_real = (head == tail) && busy[head];
     assign pop_able  = cache_ready;
 
     // is_working
@@ -153,7 +152,7 @@ module LoadStoreBuffer #(
         end
     end
 
-    assign full = full_real && !shot_able;
+    assign full = (head == tail && busy[head]) || (tail + `LSB_SIZE_BIT'b1 == head && inst_valid && !shot_able);
 
     assign cache_wr = work_type[head][3];
     assign cache_addr = r1[head] + {{20{offset[head][11]}}, offset[head]};
