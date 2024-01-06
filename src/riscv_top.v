@@ -104,7 +104,7 @@ module riscv_top #(
     cpu cpu0 (
         .clk_in(clk),
         .rst_in(rst | program_finish),
-        .rdy_in(cpu_rdy & ~hci_io_full),
+        .rdy_in(cpu_rdy & (~hci_io_full | 1'b`SIM)),
 
         .mem_din(cpu_ram_din),
         .mem_dout(cpu_ram_dout),
