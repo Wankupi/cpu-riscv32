@@ -52,7 +52,7 @@ module Cache (
 
     MemoryController memCtrl (
         .clk_in(clk_in),
-        .rst_in(rst_in),
+        .rst_in(rst_in | rob_clear),
         .rdy_in(rdy_in),
 
         .mem_din(mem_din),
