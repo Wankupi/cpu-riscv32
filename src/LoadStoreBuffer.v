@@ -152,7 +152,7 @@ module LoadStoreBuffer #(
         end
     end
 
-    assign full = (head == tail && busy[head]) || (tail + `LSB_SIZE_BIT'b1 == head && inst_valid && !shot_this_cycle);
+    assign full = (head == tail && busy[head]) || (tail + `LSB_SIZE_BIT'b1 == head && inst_valid && !pop_able);
 
     assign cache_wr = work_type[head][3];
     assign cache_addr = r1[head] + {{20{offset[head][11]}}, offset[head]};
