@@ -174,16 +174,13 @@ module riscv_top #(
     assign led[1]      = cpu_rdy;
     assign led[2]      = rst | program_finish;
     assign led[3]      = hci_io_full;
-    assign led[4]      = cpu_dbgreg_dout[16];  // rob full
-    assign led[5]      = cpu_dbgreg_dout[17];  // rs full
-    assign led[6]      = cpu_dbgreg_dout[18];  // lsb full
-    assign led[15:7]   = 0;
+    assign led[15 : 4] = cpu_dbgreg_dout[31 : 16];
 
     DigitalTube digitalTube (
         .clk(clk),
         .rst(rst),
         .value(cpu_dbgreg_dout[15:0]),
-        .set(btnL),
+        .set(btnL | program_finish),
         .seg(seg),
         .an(an),
         .dp(dp)
