@@ -1,11 +1,8 @@
 // riscv top module file
 // modification allowed for debugging purposes
-`ifndef SIM
-`define SIM 0
-`endif
 
 module riscv_top #(
-    parameter SIM = `SIM  // whether in simulation
+    parameter SIM = 0  // whether in simulation
 ) (
     input  wire        EXCLK,
     input  wire        btnC,
@@ -104,7 +101,7 @@ module riscv_top #(
     cpu cpu0 (
         .clk_in(clk),
         .rst_in(rst | program_finish),
-        .rdy_in(cpu_rdy & (~hci_io_full | 1'b`SIM)),
+        .rdy_in(cpu_rdy & (~hci_io_full | {1{SIM[0]}})),
 
         .mem_din(cpu_ram_din),
         .mem_dout(cpu_ram_dout),

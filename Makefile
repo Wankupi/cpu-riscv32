@@ -26,7 +26,7 @@ _no_testcase_name_check:
 
 # All build result are put at testspace
 build_sim:
-	@cd $(src) && iverilog -DSIM -o $(testspace)/test $(sim)/testbench.v  ${sources}
+	@cd $(src) && iverilog -o $(testspace)/test $(sim)/testbench.v  ${sources}
 
 build_sim_test: _no_testcase_name_check all
 	@cp $(sim_testcase)/*$(name)*.c $(testspace)/test.c
