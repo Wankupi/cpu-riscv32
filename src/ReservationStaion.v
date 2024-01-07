@@ -46,18 +46,21 @@ module ReservationStaion #(
     wire [                31 : 0] sv1       [0 : RS_SIZE - 1];
     wire [                31 : 0] sv2       [0 : RS_SIZE - 1];
 
+    reg  [       RS_SIZE_BIT : 0] size;
+
     generate
         genvar i;
         for (i = 0; i < RS_SIZE; i = i + 1) begin : Exe
-            assign free1[i] = !has_dep1[i] || (lsb_ready && lsb_rob_id == dep1[i]) || (rs_ready && rs_rob_id == dep1[i]);
-            assign free2[i] = !has_dep2[i] || (lsb_ready && lsb_rob_id == dep2[i]) || (rs_ready && rs_rob_id == dep2[i]);
-            assign sv1[i] = !has_dep1[i] ? r1[i] :  //
-                (lsb_ready && lsb_rob_id == dep1[i]) ? lsb_value :  //
-                (rs_ready && rs_rob_id == dep1[i]) ? rs_value : 32'b0;
-            assign sv2[i] = !has_dep2[i] ? r2[i] :  //
-                (lsb_ready && lsb_rob_id == dep2[i]) ? lsb_value :  //
-                (rs_ready && rs_rob_id == dep2[i]) ? rs_value : 32'b0;
-            assign executable[i] = busy[i] && free1[i] && free2[i];
+            // assign free1[i] = !has_dep1[i] || (lsb_ready && lsb_rob_id == dep1[i]) || (rs_ready && rs_rob_id == dep1[i]);
+            // assign free2[i] = !has_dep2[i] || (lsb_ready && lsb_rob_id == dep2[i]) || (rs_ready && rs_rob_id == dep2[i]);
+            // assign sv1[i] = !has_dep1[i] ? r1[i] :  //
+            //     (lsb_ready && lsb_rob_id == dep1[i]) ? lsb_value :  //
+            //     (rs_ready && rs_rob_id == dep1[i]) ? rs_value : 32'b0;
+            // assign sv2[i] = !has_dep2[i] ? r2[i] :  //
+            //     (lsb_ready && lsb_rob_id == dep2[i]) ? lsb_value :  //
+            //     (rs_ready && rs_rob_id == dep2[i]) ? rs_value : 32'b0;
+            // assign executable[i] = busy[i] && free1[i] && free2[i];
+            assign executable[i] = busy[i] && !has_dep1[i] && !has_dep2[i];
         end
     endgenerate
 
@@ -82,11 +85,13 @@ module ReservationStaion #(
             assign tmp_free[i] = tmp_free[i<<1] | tmp_free[i<<1|1];
             assign free_pos[i] = tmp_free[i<<1] ? free_pos[i<<1] : free_pos[i<<1|1];
         end
-        assign shotable = tmp_exe[1];
-        assign shot_pos = exe_pos[1];
+        assign shotable   = tmp_exe[1];
+        assign shot_pos   = exe_pos[1];
         assign insert_pos = free_pos[1];
-        assign full = ~tmp_free[1];
+        // assign full = ~tmp_free[1];
     endgenerate
+
+    assign full = size == RS_SIZE || ((size == {1'b0, {RS_SIZE_BIT{1'b1}}}) && inst_valid && !shotable);
 
     scalar_alu alu (
         .clk_in(clk_in),
@@ -95,8 +100,10 @@ module ReservationStaion #(
 
         .valid(executable[shot_pos]),
         .work_type(work_type[shot_pos]),
-        .r1(sv1[shot_pos]),
-        .r2(sv2[shot_pos]),
+        // .r1(sv1[shot_pos]),
+        // .r2(sv2[shot_pos]),
+        .r1(r1[shot_pos]),
+        .r2(r2[shot_pos]),
         .inst_rob_id(rob_id[shot_pos]),
         .ready(rs_ready),
         .rob_id(rs_rob_id),
@@ -116,6 +123,7 @@ module ReservationStaion #(
                 has_dep2[i] <= 0;
                 dep1[i] <= 0;
                 dep2[i] <= 0;
+                size <= 0;
             end
         end
         else if (!rdy_in) begin
@@ -158,6 +166,12 @@ module ReservationStaion #(
             // pop
             if (shotable) begin
                 busy[shot_pos] <= 0;
+            end
+            if (inst_valid && !shotable) begin
+                size <= size + 1;
+            end
+            else if (!inst_valid && shotable) begin
+                size <= size - 1;
             end
         end
     end
