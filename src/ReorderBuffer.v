@@ -76,7 +76,7 @@ module ReorderBuffer #(
         if (rst_in) begin
             count_finished <= 1;
         end
-        if (rst_in || clear) begin
+        if (rst_in || (clear && rdy_in)) begin
             clear  <= 0;
             new_pc <= 0;
             for (i = 0; i < ROB_SIZE; i = i + 1) begin
@@ -91,10 +91,7 @@ module ReorderBuffer #(
             head <= 0;
             tail <= 0;
         end
-        else if (!rdy_in) begin
-            // do nothing
-        end
-        else begin
+        else if (rdy_in) begin
             if (rs_ready) begin
                 ready[rs_rob_id] <= 1;
                 value[rs_rob_id] <= rs_value;

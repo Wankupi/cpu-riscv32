@@ -126,10 +126,7 @@ module ReservationStaion #(
                 size <= 0;
             end
         end
-        else if (!rdy_in) begin
-            // do nothing
-        end
-        else begin
+        else if (rdy_in) begin
             // insert
             if (inst_valid) begin
                 busy[insert_pos] <= 1;

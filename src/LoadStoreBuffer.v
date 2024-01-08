@@ -98,10 +98,7 @@ module LoadStoreBuffer #(
                 offset[i] <= 0;
             end
         end
-        else if (!rdy_in) begin
-            // do nothing
-        end
-        else begin
+        else if (rdy_in)  begin
             if (shot_this_cycle) begin
                 work <= 1;
             end

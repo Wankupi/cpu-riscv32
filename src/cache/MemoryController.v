@@ -78,10 +78,7 @@ module MemoryController (
             current_wr <= 0;
             result <= 0;
         end
-        else if (!rdy_in) begin
-            // do nothing
-        end
-        else begin
+        else if (rdy_in)  begin
             case (work_cycle)
                 3'b000: begin  // not working: waiting or done
                     if (need_work) begin
