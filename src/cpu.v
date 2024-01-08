@@ -14,7 +14,9 @@ module cpu (
 
     input wire io_buffer_full,  // 1 if uart buffer is full
 
-    output wire [31 : 0] dbgreg_dout  // cpu register output (debugging demo)
+    output wire [71 : 0] dbg_rob_info,
+    output wire [31 : 0] count_finished,
+    output wire [31 : 0] dbgreg_dout    // cpu register output (debugging demo)
 );
 
     // implementation goes here
@@ -364,7 +366,8 @@ module cpu (
         .clear (rob_clear),
         .new_pc(rob2if_new_pc),
 
-        .count_finished(dbgreg_dout[15:0])
+        .count_finished(count_finished),
+        .debug(dbg_rob_info)
     );
 
     assign dbgreg_dout[16] = rob_full;

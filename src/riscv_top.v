@@ -98,7 +98,7 @@ module riscv_top #(
 
     reg                       q_hci_io_en;
 
-    cpu cpu0 (
+    cpu_wrapper cpu0 (
         .clk_in(clk),
         .rst_in(rst | program_finish),
         .rdy_in(cpu_rdy & (~hci_io_full | {1{SIM[0]}})),

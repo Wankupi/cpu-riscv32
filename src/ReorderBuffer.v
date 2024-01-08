@@ -51,7 +51,8 @@ module ReorderBuffer #(
     output reg clear,
     output reg [31:0] new_pc,
 
-    output reg [15:0] count_finished
+    output reg [31:0] count_finished,
+    output reg [32 + 8 + 32 - 1 : 0] debug
 );
 
     localparam ROB_SIZE = 1 << ROB_SIZE_BIT;
@@ -74,9 +75,10 @@ module ReorderBuffer #(
     integer i;
     always @(posedge clk_in) begin
         if (rst_in) begin
-            count_finished <= 1;
+            count_finished <= 0;
+            debug <= 0;
         end
-        if (rst_in || clear) begin
+        if (rst_in || (clear && rdy_in)) begin
             clear  <= 0;
             new_pc <= 0;
             for (i = 0; i < ROB_SIZE; i = i + 1) begin
@@ -122,18 +124,25 @@ module ReorderBuffer #(
                 head <= head + 1;
                 busy[head] <= 0;
                 ready[head] <= 0;
+                debug[31:0] <= inst_addr[head];
+                debug[33 : 32] <= work_type[head];
+                debug[38 : 34] <= rd[head];
+                debug[71:40] <= value[head];
                 case (work_type[head])
                     TypeRg: begin
                         // things are done by wire
+                        // $display("[%7d] %h reg[%d] = %h", count_finished, inst_addr[head], rd[head], value[head]);
                     end
                     TypeSt: begin
                         // do nothing
+                        // $display("[%7d] %h st", count_finished, inst_addr[head]);
                     end
                     TypeBr: begin
                         if (value[head][0] ^ jump_addr[head][0]) begin
                             new_pc <= {jump_addr[head][31:1], 1'b0};
                             clear  <= 1;
                         end
+                        // $display("[%7d] %h br %h", count_finished, inst_addr[head], value[head][0]);
                     end
                 endcase
             end
