@@ -29,10 +29,10 @@ module Cache (
 );
     // mx: MemoryCtrl
     reg         mc_enable;
-    wire        mc_wr;
-    wire [31:0] mc_addr;
-    wire [ 2:0] mc_len;
-    wire [31:0] mc_data;
+    reg         mc_wr;
+    reg  [31:0] mc_addr;
+    reg  [ 2:0] mc_len;
+    reg  [31:0] mc_data;
     wire        mc_ready;
     wire [31:0] mc_res;
     wire        i_hit;
@@ -74,37 +74,43 @@ module Cache (
     reg working;
     reg work_type;
 
-    // work on data and data is write
-    assign mc_wr = work_type && data_wr;
-    assign mc_addr = work_type ? data_addr : PC;
-    assign mc_len = work_type ? data_size : 3'b010;
-    assign mc_data = data_value;
-
     assign data_ready = working && work_type && mc_ready;
     assign data_res = mc_res;
-    assign inst_ready = i_hit || (working && !work_type && mc_ready);
-    assign inst_res = i_hit ? i_res : mc_res;
+    assign inst_ready = i_hit;
+    assign inst_res = i_res;
     assign i_we = working && !work_type && mc_ready;
 
     always @(posedge clk_in) begin
         if (rst_in | rob_clear) begin
-            working   <= 0;
+            working <= 0;
             work_type <= 0;
             mc_enable <= 0;
+            mc_wr <= 0;
+            mc_addr <= 0;
+            mc_len <= 0;
+            mc_data <= 0;
         end
         else if (!rdy_in) begin
             // do nothing
         end
         else if (!working) begin
             if (data_valid) begin
-                working   <= 1;
+                working <= 1;
                 work_type <= 1;
                 mc_enable <= 1;
+                mc_wr <= data_wr;
+                mc_addr <= data_addr;
+                mc_len <= data_size;
+                mc_data <= data_value;
             end
             else if (inst_valid && !inst_ready) begin
-                working   <= 1;
+                working <= 1;
                 work_type <= 0;
                 mc_enable <= 1;
+                mc_wr <= 0;
+                mc_addr <= PC;
+                mc_len <= 3'b010;
+                mc_data <= 0;
             end
         end
         else if (mc_ready) begin
