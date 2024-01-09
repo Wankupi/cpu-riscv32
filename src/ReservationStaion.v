@@ -17,7 +17,7 @@ module ReservationStaion #(
     input wire                           inst_has_dep1,
     input wire                           inst_has_dep2,
 
-    output wire full,
+    output reg full,
 
     input wire                          lsb_ready,
     input wire [`ROB_WIDTH_BIT - 1 : 0] lsb_rob_id,
@@ -91,7 +91,8 @@ module ReservationStaion #(
         // assign full = ~tmp_free[1];
     endgenerate
 
-    assign full = size == RS_SIZE || ((size == {1'b0, {RS_SIZE_BIT{1'b1}}}) && inst_valid && !shotable);
+    wire next_size = inst_valid & !shotable ? size + 1 : !inst_valid & shotable ? size - 1 : size;
+    wire next_full = next_size == RS_SIZE;
 
     scalar_alu alu (
         .clk_in(clk_in),
@@ -124,9 +125,12 @@ module ReservationStaion #(
                 dep1[i] <= 0;
                 dep2[i] <= 0;
                 size <= 0;
+                full <= 0;
             end
         end
         else if (rdy_in) begin
+            size <= next_size;
+            full <= next_full;
             // insert
             if (inst_valid) begin
                 busy[insert_pos] <= 1;
@@ -163,12 +167,6 @@ module ReservationStaion #(
             // pop
             if (shotable) begin
                 busy[shot_pos] <= 0;
-            end
-            if (inst_valid && !shotable) begin
-                size <= size + 1;
-            end
-            else if (!inst_valid && shotable) begin
-                size <= size - 1;
             end
         end
     end

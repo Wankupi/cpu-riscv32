@@ -19,7 +19,7 @@ module LoadStoreBuffer #(
     input  wire [                11:0] inst_offset,
     input  wire [`ROB_WIDTH_BIT - 1:0] inst_rob_id,
     // to Decoder
-    output wire                        full,
+    output reg                         full,
 
     // with cache
     /*
@@ -51,39 +51,45 @@ module LoadStoreBuffer #(
 
     localparam LSB_SIZE = 1 << LSB_SIZE_BIT;
 
-    reg [  LSB_SIZE_BIT - 1:0] head;
-    reg [  LSB_SIZE_BIT - 1:0] tail;
+    reg  [  LSB_SIZE_BIT - 1:0] head;
+    reg  [  LSB_SIZE_BIT - 1:0] tail;
+    reg  [    LSB_SIZE_BIT : 0] size;
 
-    reg                        busy     [0 : LSB_SIZE - 1];
-    reg [`ROB_WIDTH_BIT - 1:0] rob_id   [0 : LSB_SIZE - 1];
-    reg [  `LS_TYPE_BIT - 1:0] work_type[0 : LSB_SIZE - 1];
-    reg [                31:0] r1       [0 : LSB_SIZE - 1];
-    reg [                31:0] r2       [0 : LSB_SIZE - 1];
-    reg [`ROB_WIDTH_BIT - 1:0] dep1     [0 : LSB_SIZE - 1];
-    reg [`ROB_WIDTH_BIT - 1:0] dep2     [0 : LSB_SIZE - 1];
-    reg                        has_dep1 [0 : LSB_SIZE - 1];
-    reg                        has_dep2 [0 : LSB_SIZE - 1];
-    reg [                11:0] offset   [0 : LSB_SIZE - 1];
+    reg                         busy     [0 : LSB_SIZE - 1];
+    reg  [`ROB_WIDTH_BIT - 1:0] rob_id   [0 : LSB_SIZE - 1];
+    reg  [  `LS_TYPE_BIT - 1:0] work_type[0 : LSB_SIZE - 1];
+    reg  [                31:0] r1       [0 : LSB_SIZE - 1];
+    reg  [                31:0] r2       [0 : LSB_SIZE - 1];
+    reg  [`ROB_WIDTH_BIT - 1:0] dep1     [0 : LSB_SIZE - 1];
+    reg  [`ROB_WIDTH_BIT - 1:0] dep2     [0 : LSB_SIZE - 1];
+    reg                         has_dep1 [0 : LSB_SIZE - 1];
+    reg                         has_dep2 [0 : LSB_SIZE - 1];
+    reg  [                11:0] offset   [0 : LSB_SIZE - 1];
 
 
-    wire pop_able;
+    wire                        pop_able;
 
-    assign pop_able  = cache_ready;
+    assign pop_able = cache_ready;
 
     // is_working
     reg work;
     // k : which slot to shot
     wire [LSB_SIZE_BIT - 1 : 0] k = work ? head + 1 : head;
-    wire shot_able = busy[k] && !has_dep1[k] && !has_dep2[k] && (!work_type[k][3] || rob_id[k] == rob_id_head);
+    wire shot_able = busy[k] && !has_dep1[k] && !has_dep2[k] && (!work_type[k][3] || (!rob_empty && rob_id[k] == rob_id_head));
     wire shot_this_cycle = shot_able && (!work || cache_ready);
 
     assign cache_valid = work;
+
+    wire [LSB_SIZE_BIT : 0] next_size = (inst_valid && !pop_able) ? size + 1 : (!inst_valid && pop_able) ? size - 1 : size;
+    wire next_full = next_size == LSB_SIZE;
 
     integer i;
     always @(posedge clk_in) begin
         if (rst_in) begin
             head <= 0;
             tail <= 0;
+            size <= 0;
+            full <= 0;
             work <= 0;
             for (i = 0; i < LSB_SIZE; i = i + 1) begin : RESET
                 busy[i] <= 0;
@@ -98,7 +104,9 @@ module LoadStoreBuffer #(
                 offset[i] <= 0;
             end
         end
-        else if (rdy_in)  begin
+        else if (rdy_in) begin
+            size <= next_size;
+            full <= next_full;
             if (shot_this_cycle) begin
                 work <= 1;
             end
@@ -149,7 +157,7 @@ module LoadStoreBuffer #(
         end
     end
 
-    assign full = (head == tail && busy[head]) || (tail + `LSB_SIZE_BIT'b1 == head && inst_valid && !pop_able);
+    // assign full = (head == tail && busy[head]) || (tail + `LSB_SIZE_BIT'b1 == head && inst_valid && !pop_able);
 
     assign cache_wr = work_type[head][3];
     assign cache_addr = r1[head] + {{20{offset[head][11]}}, offset[head]};
@@ -157,6 +165,6 @@ module LoadStoreBuffer #(
     assign cache_value = r2[head];
 
     assign lsb_ready = cache_ready;
-    assign lsb_rob_id = lsb_ready ? rob_id[head] : 0;
-    assign lsb_value = lsb_ready ? cache_res : 0;
+    assign lsb_rob_id = rob_id[head];
+    assign lsb_value = cache_res;
 endmodule
