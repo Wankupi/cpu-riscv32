@@ -27,10 +27,10 @@ module LoadStoreBuffer #(
     cache_size[2] signed or not signed
 	*/
     output wire        cache_valid,
-    output wire        cache_wr,
-    output wire [ 2:0] cache_size,
-    output wire [31:0] cache_addr,
-    output wire [31:0] cache_value,
+    output reg         cache_wr,
+    output reg  [ 2:0] cache_size,
+    output reg  [31:0] cache_addr,
+    output reg  [31:0] cache_value,
     input  wire        cache_ready,
     input  wire [31:0] cache_res,
 
@@ -75,7 +75,9 @@ module LoadStoreBuffer #(
     reg work;
     // k : which slot to shot
     wire [LSB_SIZE_BIT - 1 : 0] k = work ? head + 1 : head;
-    wire shot_able = busy[k] && !has_dep1[k] && !has_dep2[k] && (!work_type[k][3] || (!rob_empty && rob_id[k] == rob_id_head));
+    wire [31:0] need_addr = r1[k] + {{20{offset[k][11]}}, offset[k]};
+    wire need_confirm = work_type[k][3] || (need_addr[17:16] == 2'b11);
+    wire shot_able = busy[k] && !has_dep1[k] && !has_dep2[k] && (!need_confirm || (!rob_empty && rob_id[k] == rob_id_head));
     wire shot_this_cycle = shot_able && (!work || cache_ready);
 
     assign cache_valid = work;
@@ -109,6 +111,10 @@ module LoadStoreBuffer #(
             full <= next_full;
             if (shot_this_cycle) begin
                 work <= 1;
+                cache_wr <= work_type[k][3];
+                cache_addr <= need_addr;
+                cache_size <= work_type[k][2:0];
+                cache_value <= r2[k];
             end
             else if (work && cache_ready) begin
                 work <= 0;
@@ -159,12 +165,7 @@ module LoadStoreBuffer #(
 
     // assign full = (head == tail && busy[head]) || (tail + `LSB_SIZE_BIT'b1 == head && inst_valid && !pop_able);
 
-    assign cache_wr = work_type[head][3];
-    assign cache_addr = r1[head] + {{20{offset[head][11]}}, offset[head]};
-    assign cache_size = work_type[head][2:0];
-    assign cache_value = r2[head];
-
-    assign lsb_ready = cache_ready;
+    assign lsb_ready  = cache_ready;
     assign lsb_rob_id = rob_id[head];
-    assign lsb_value = cache_res;
+    assign lsb_value  = cache_res;
 endmodule
