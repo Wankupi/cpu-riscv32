@@ -25,7 +25,7 @@ module MemoryController (
     // len[2] signed or not signed
     input  wire [ 2:0] len,
     input  wire [31:0] data,   // data to write
-    output wire        ready,  // work finished
+    output reg         ready,  // work finished
     output wire [31:0] res     // result
 );
     function [31:0] get_result;
@@ -53,13 +53,13 @@ module MemoryController (
 
     wire        is_io_mapping = addr[17:16] == 2'b11;
     wire        able_to_write = !(is_io_mapping && wr && io_buffer_full);
-    assign ready = worked && work_cycle == 0 && work_addr == addr && work_wr == wr && work_len == len;
-    wire need_work = valid && !ready && able_to_write;
+    // assign ready = worked && work_cycle == 0 && work_addr == addr && work_wr == wr && work_len == len;
+    wire        need_work = valid && !ready && able_to_write;
 
     // `direct` choose direct or inner value
     // 0: direct, 1: inner
     // direct means connect the input of this module to the input of Memory directyly
-    wire direct = work_cycle == 0 && need_work;
+    wire        direct = work_cycle == 0 && need_work;
     assign mem_wr = direct ? wr : current_wr;
     assign mem_a = direct ? addr : current_addr;
     assign mem_dout = direct ? data[7:0] : current_data;
@@ -77,60 +77,69 @@ module MemoryController (
             current_data <= 0;
             current_wr <= 0;
             result <= 0;
+            ready <= 0;
         end
-        else if (rdy_in)  begin
-            case (work_cycle)
-                3'b000: begin  // not working: waiting or done
-                    if (need_work) begin
-                        result <= data;
-                        worked <= 1;
-                        work_len <= len;
-                        work_addr <= addr;
-                        work_wr    <= wr;
-                        if (len[1:0]) begin
-                            work_cycle   <= 3'b001;
-                            current_addr <= addr + 1;
-                            current_data <= data[15:8];
-                            current_wr   <= wr;
+        else if (rdy_in) begin
+            if (ready) begin
+                ready <= 0;
+            end
+            else begin
+                case (work_cycle)
+                    3'b000: begin  // not working: waiting or done
+                        if (need_work) begin
+                            result <= data;
+                            worked <= 1;
+                            work_len <= len;
+                            work_addr <= addr;
+                            work_wr    <= wr;
+                            if (len[1:0]) begin
+                                work_cycle   <= 3'b001;
+                                current_addr <= addr + 1;
+                                current_data <= data[15:8];
+                                current_wr   <= wr;
+                            end
+                            else begin
+                                work_cycle   <= 3'b000;
+                                // special case: addr[17:16] == 2'b11
+                                // otherwise, keep addr
+                                current_addr <= addr[17:16] == 2'b11 ? 0 : addr;
+                                current_data <= 0;
+                                current_wr   <= 0;
+                                ready <= 1;
+                            end
                         end
-                        else begin
+                    end
+                    3'b001: begin
+                        result[7:0] <= mem_din;
+                        if (work_len[1:0] == 2'b01) begin
                             work_cycle   <= 3'b000;
-                            // special case: addr[17:16] == 2'b11
-                            // otherwise, keep addr
-                            current_addr <= addr[17:16] == 2'b11 ? 0 : addr;
                             current_data <= 0;
                             current_wr   <= 0;
+                            ready <= 1;
+                            // keep current_addr
+                        end
+                        else begin
+                            work_cycle   <= 3'b010;
+                            current_addr <= work_addr + 2;
+                            current_data <= data[23:16];
                         end
                     end
-                end
-                3'b001: begin
-                    result[7:0] <= mem_din;
-                    if (work_len[1:0] == 2'b01) begin
-                        work_cycle   <= 3'b000;
+                    3'b010: begin
+                        result[15:8] <= mem_din;
+                        current_addr <= work_addr + 3;
+                        current_data <= data[31:24];
+                        work_cycle   <= 3'b011;
+                    end
+                    3'b011: begin
+                        result[23:16] <= mem_din;
+                        work_cycle <= 3'b000;
                         current_data <= 0;
-                        current_wr   <= 0;
+                        current_wr <= 0;
+                        ready <= 1;
                         // keep current_addr
                     end
-                    else begin
-                        work_cycle   <= 3'b010;
-                        current_addr <= work_addr + 2;
-                        current_data <= data[23:16];
-                    end
-                end
-                3'b010: begin
-                    result[15:8] <= mem_din;
-                    current_addr <= work_addr + 3;
-                    current_data <= data[31:24];
-                    work_cycle   <= 3'b011;
-                end
-                3'b011: begin
-                    result[23:16] <= mem_din;
-                    work_cycle <= 3'b000;
-                    current_data <= 0;
-                    current_wr <= 0;
-                    // keep current_addr
-                end
-            endcase
+                endcase
+            end
         end
     end
 
