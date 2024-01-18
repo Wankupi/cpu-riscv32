@@ -83,7 +83,7 @@ module LoadStoreBuffer #(
     assign cache_valid = work;
 
     wire [LSB_SIZE_BIT : 0] next_size = (inst_valid && !pop_able) ? size + 1 : (!inst_valid && pop_able) ? size - 1 : size;
-    wire next_full = next_size == LSB_SIZE;
+    wire next_full = next_size == LSB_SIZE || next_size + 1 == LSB_SIZE;
 
     integer i;
     always @(posedge clk_in) begin
