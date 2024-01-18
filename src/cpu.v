@@ -12,9 +12,9 @@ module cpu (
     output wire [31 : 0] mem_a,     // address bus (only 17 : 0 is used)
     output wire          mem_wr,    // write/read signal (1 for write)
 
-    input wire io_buffer_full,  // 1 if uart buffer is full
+    input wire io_buffer_full  // 1 if uart buffer is full
 
-    output wire [31 : 0] dbgreg_dout  // cpu register output (debugging demo)
+    // output wire [31 : 0] dbgreg_dout  // cpu register output (debugging demo)
 );
 
     // implementation goes here
@@ -362,18 +362,18 @@ module cpu (
         .set_dep_rob_id   (set_dep_rob_id),
 
         .clear (rob_clear),
-        .new_pc(rob2if_new_pc),
+        .new_pc(rob2if_new_pc)
 
-        .count_finished(dbgreg_dout[15:0])
+        // .count_finished(dbgreg_dout[15:0])
     );
 
-    assign dbgreg_dout[16] = rob_full;
-    assign dbgreg_dout[17] = rs_full;
-    assign dbgreg_dout[18] = lsb_full;
-    assign dbgreg_dout[19] = rob_clear;
-    assign dbgreg_dout[20] = dc2if_stall;
-    assign dbgreg_dout[21] = dc2if_clear;
-    assign dbgreg_dout[22] = set_reg_id != 0;
-    assign dbgreg_dout[23] = mem_wr;
-    assign dbgreg_dout[31:24] = 0;
+    // assign dbgreg_dout[16] = rob_full;
+    // assign dbgreg_dout[17] = rs_full;
+    // assign dbgreg_dout[18] = lsb_full;
+    // assign dbgreg_dout[19] = rob_clear;
+    // assign dbgreg_dout[20] = dc2if_stall;
+    // assign dbgreg_dout[21] = dc2if_clear;
+    // assign dbgreg_dout[22] = set_reg_id != 0;
+    // assign dbgreg_dout[23] = mem_wr;
+    // assign dbgreg_dout[31:24] = 0;
 endmodule

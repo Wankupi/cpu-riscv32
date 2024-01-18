@@ -101,17 +101,16 @@ module riscv_top #(
     cpu cpu0 (
         .clk_in(clk),
         .rst_in(rst | program_finish),
-        .rdy_in(cpu_rdy & (~hci_io_full | {1{SIM[0]}})),
+        .rdy_in(cpu_rdy),
 
         .mem_din(cpu_ram_din),
         .mem_dout(cpu_ram_dout),
         .mem_a(cpu_ram_a),
         .mem_wr(cpu_ram_wr),
 
-        // .io_buffer_full(hci_io_full & ~1'b`SIM),
-        .io_buffer_full(1'b0),
+        .io_buffer_full(hci_io_full & ~{1{SIM[0]}})
 
-        .dbgreg_dout(cpu_dbgreg_dout)
+        // .dbgreg_dout(cpu_dbgreg_dout)
     );
 
     hci #(
@@ -168,18 +167,18 @@ module riscv_top #(
 
     // indicates debug break
     assign led[0]      = hci_active;
-    assign led[1]      = cpu_rdy;
-    assign led[2]      = rst | program_finish;
-    assign led[3]      = hci_io_full;
-    assign led[15 : 4] = cpu_dbgreg_dout[31 : 16];
+    // assign led[1]      = cpu_rdy;
+    // assign led[2]      = rst | program_finish;
+    // assign led[3]      = hci_io_full;
+    // assign led[15 : 4] = cpu_dbgreg_dout[31 : 16];
 
-    DigitalTube digitalTube (
-        .clk(clk),
-        .rst(rst),
-        .value(cpu_dbgreg_dout[15:0]),
-        .set(btnL | program_finish),
-        .seg(seg),
-        .an(an),
-        .dp(dp)
-    );
+    // DigitalTube digitalTube (
+    //     .clk(clk),
+    //     .rst(rst),
+    //     .value(cpu_dbgreg_dout[15:0]),
+    //     .set(btnL | program_finish),
+    //     .seg(seg),
+    //     .an(an),
+    //     .dp(dp)
+    // );
 endmodule
