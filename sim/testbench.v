@@ -18,7 +18,7 @@ riscv_top #(.SIM(1)) top(
 initial begin
   clk=0;
   rst=1;
-  repeat(10) #1 clk=!clk;
+  repeat(50) #1 clk=!clk;
   rst=0; 
   forever #1 clk=!clk;
 
@@ -26,9 +26,11 @@ initial begin
 end
 
 initial begin
-    //  $dumpfile("test.vcd");
-    //  $dumpvars(0, testbench);
-     #3000000000 $finish;
+`ifndef ONLINE_JUDGE
+  $dumpfile("test.vcd");
+  $dumpvars(0, testbench);
+`endif
+  #300000000 $finish;
 end
 
 endmodule
