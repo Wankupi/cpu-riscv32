@@ -46,7 +46,6 @@ module ReservationStaion #(
     wire [                31 : 0] sv1       [0 : RS_SIZE - 1];
     wire [                31 : 0] sv2       [0 : RS_SIZE - 1];
 
-    reg  [       RS_SIZE_BIT : 0] size;
 
     generate
         genvar i;
@@ -91,7 +90,9 @@ module ReservationStaion #(
         // assign full = ~tmp_free[1];
     endgenerate
 
-    wire next_size = inst_valid & !shotable ? size + 1 : !inst_valid & shotable ? size - 1 : size;
+    reg  [       RS_SIZE_BIT : 0] size;
+    wire [       RS_SIZE_BIT : 0] next_size = (inst_valid & !shotable) ? size + 1 :
+                                              (!inst_valid & shotable) ? size - 1 : size;
     wire next_full = next_size == RS_SIZE;
 
     scalar_alu alu (
